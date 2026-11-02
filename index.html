@@ -136,7 +136,7 @@ footer a { color: var(--accent); text-decoration: none; }
   </details>
 
   <footer>
-    空心点 = 那次抓到的盘口不够成交整笔单，数值偏乐观。手续费为基础档（无 VIP / 质押折扣）；Lighter 按 Standard 账户 0 费率计，未反映其下单延迟成本。
+    空心点 = 那次抓到的盘口不够成交整笔单，数值偏乐观。总成本按当前费率表对全部历史重算：基础档 taker（无 VIP / 质押折扣），Hyperliquid 4.5、edgeX 4.5、Aster 4.0、Extended 2.5、Lighter 2.0（Premium 账户；Standard 账户 0 费率但有 200–300ms 下单延迟）。
     盘口深度各家抓取范围不同，仅适合看同一家随时间的变化。<br>
     数据：<a href="https://github.com/UT-Silver/perp-liquidity-tracker/tree/main/data">github.com/UT-Silver/perp-liquidity-tracker/data</a>
   </footer>
@@ -160,7 +160,7 @@ const state = {
   metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own",
   venues: new Set(["hyperliquid","lighter","aster","edgex"]),
 };
-let ROWS = [], ALL_TOKENS = [], ALL_CLIPS = [], HOVER_T = null;
+let FEES = {}, ROWS = [], ALL_TOKENS = [], ALL_CLIPS = [], HOVER_T = null;
 const PANELS = [];   // {el, svg, X, tip, data, render hover}
 
 const css = n => getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(n).trim();
@@ -183,10 +183,15 @@ async function load() {
   let months;
   try { months = (await (await fetch("data/manifest.json", {cache:"no-store"})).json()).months; }
   catch { months = [new Date().toISOString().slice(0,7)]; }
-  const texts = await Promise.all(months.map(m => fetch(`data/${m}/slippage.csv`, {cache:"no-store"}).then(r => r.ok ? r.text() : "")));
+  const [texts, fees] = await Promise.all([
+    Promise.all(months.map(m => fetch(`data/${m}/slippage.csv`, {cache:"no-store"}).then(r => r.ok ? r.text() : ""))),
+    fetch("config/fees.json", {cache:"no-store"}).then(r => r.json()).then(j => Object.fromEntries(Object.entries(j.venues).map(([k,v]) => [k, +v.taker_bps]))).catch(() => ({})),
+  ]);
+  FEES = fees;
   ROWS = texts.filter(Boolean).flatMap(parseCSV).map(r => ({
     t: +new Date(r.run_ts), venue: r.venue, token: r.token, side: r.side, clip: +r.clip_usd,
-    total_cost_bps: r.total_cost_bps === "" ? null : +r.total_cost_bps,
+    // total = slippage + the CURRENT fee schedule, so a fee change applies to all history
+    total_cost_bps: FEES[r.venue] != null ? +r.slippage_bps + FEES[r.venue] : (r.total_cost_bps === "" ? null : +r.total_cost_bps),
     slippage_bps: +r.slippage_bps, spread_bps: r.spread_bps === "" ? null : +r.spread_bps,
     book_depth_usd: +r.book_depth_usd, partial: r.partial === "True",
   }));

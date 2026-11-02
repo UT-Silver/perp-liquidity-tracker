@@ -6,8 +6,8 @@
       "note": "Base tier 0.045% taker; HYPE staking / volume tiers lower it."
     },
     "lighter": {
-      "taker_bps": 0.0,
-      "note": "Standard account 0% taker (has order latency speed bump); Premium accounts pay a fee."
+      "taker_bps": 2.0,
+      "note": "Premium account taker 0.02% (low-latency tier used by active/API traders). Standard account is 0% but carries a 200-300 ms taker speed bump whose adverse-selection cost a book snapshot cannot see."
     },
     "aster": {
       "taker_bps": 4.0,
