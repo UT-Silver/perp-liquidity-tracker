@@ -5,21 +5,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS -m 20 https://pro.edgex.exchange/ -o home.html
-          grep -oE '(src|href)="[^"]+\.js"' home.html | sed -E 's/.*="([^"]+)"/\1/' | head -20 > js.txt
-          cat js.txt
-          : > hosts.txt
-          while read -r s; do
-            case "$s" in http*) u="$s";; //*) u="https:$s";; *) u="https://pro.edgex.exchange/${s#/}";; esac
-            curl -sS -m 20 "$u" -o b.js || continue
-            grep -oE 'https?://[a-zA-Z0-9.-]*edgex[a-zA-Z0-9.-]*' b.js >> hosts.txt || true
-            grep -oE '"[a-zA-Z0-9./-]*/api/v[12]/public[a-zA-Z0-9/_-]*' b.js | head -5 >> hosts.txt || true
-          done < js.txt
-          echo "== hosts"; sort | uniq -c < hosts.txt | sort -rn | head -40
-          echo "== try candidates"
-          for h in $(grep -oE 'https?://[a-zA-Z0-9.-]*edgex[a-zA-Z0-9.-]*' hosts.txt | sort -u); do
-            code=$(curl -sS -m 10 -o r -w "%{http_code} %{content_type}" "$h/api/v1/public/meta/getServerTime" 2>&1 || true)
-            echo "$h v1 -> $code $(head -c 120 r | tr -d '\n')"
-            code=$(curl -sS -m 10 -o r -w "%{http_code} %{content_type}" "$h/api/v2/public/meta/getServerTime" 2>&1 || true)
-            echo "$h v2 -> $code $(head -c 120 r | tr -d '\n')"
+          H=https://edgex-prod-v2.edgex.exchange
+          for p in "api/v1/public/meta/getMetaData" "api/v2/public/meta/getMetaData" \
+                   "api/v1/public/quote/getDepth?contractId=10000001&level=200" "api/v2/public/quote/getDepth?contractId=10000001&level=200" \
+                   "api/v1/public/quote/getTicker?contractId=10000001" "api/v2/public/quote/getTicker?contractId=10000001"; do
+            code=$(curl -sS -m 15 -o r -w "%{http_code} %{content_type}" "$H/$p" 2>&1 || true)
+            echo "== $p -> $code"; head -c 700 r 2>/dev/null | tr -d '\n'; echo
           done
+          echo "== contract names"
+          curl -sS -m 15 "$H/api/v1/public/meta/getMetaData" | python3 -c "import sys,json;d=json.load(sys.stdin)['data'];print([ (c.get('contractName'),c.get('contractId')) for c in d.get('contractList',[])][:15])" || true
