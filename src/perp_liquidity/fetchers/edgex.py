@@ -6,9 +6,9 @@ API reference:
 - Base: https://pro.edgex.exchange
 
 Endpoints used:
-- GET /api/v1/public/meta/getMetaData          -> contract list (name -> contractId)
-- GET /api/v1/public/quote/getDepth            -> order book (params: contractId, level)
-- GET /api/v1/public/quote/getTicker           -> funding rate + OI + mark price (params: contractId)
+- GET /api/v2/public/meta/getMetaData          -> contract list (name -> contractId)
+- GET /api/v2/public/quote/getDepth            -> order book (params: contractId, level)
+- GET /api/v2/public/quote/getTicker           -> funding rate + OI + mark price (params: contractId)
 
 Venue notes:
 - Symbol convention: {TOKEN}USD (e.g. BTCUSD), no separator, no USDT suffix.
@@ -46,7 +46,10 @@ from .base import (
 FUNDING_PERIOD_HOURS = 4.0
 HOURS_PER_YEAR = 8760
 
-API_BASE = "https://pro.edgex.exchange"
+# edgeX V2 (Nov 2026): pro.edgex.exchange now serves the web app for /api/* paths;
+# the public REST API lives on edgex-prod-v2 under /api/v2. V1 contracts
+# (BTCUSD, id 1000000x) are gone; perps are now {TOKEN}USDC (id 3000000x).
+API_BASE = "https://edgex-prod-v2.edgex.exchange"
 
 # getTicker returns funding + OI + markPrice together. Cache briefly so
 # get_funding_rate + get_open_interest back-to-back share one HTTP call.
@@ -89,7 +92,7 @@ class EdgeXClient(PerpDEXClient):
             if self._contract_map is None:
                 try:
                     resp = await self.http.get(
-                        f"{API_BASE}/api/v1/public/meta/getMetaData",
+                        f"{API_BASE}/api/v2/public/meta/getMetaData",
                         timeout=self.TIMEOUT,
                     )
                     resp.raise_for_status()
@@ -111,18 +114,21 @@ class EdgeXClient(PerpDEXClient):
                         raw = raw[0]
                     contract_list = raw["contractList"]
                     self._contract_map = {
-                        c["contractName"]: c["contractId"] for c in contract_list
+                        c["contractName"]: c["contractId"]
+                        for c in contract_list
+                        if c.get("enableTrade", True)
                     }
                 except (KeyError, IndexError, TypeError) as e:
                     raise VenueUnavailable(
                         self.VENUE, f"unexpected getMetaData shape: {e}"
                     ) from e
 
-        name = self._contract_name(token)
-        contract_id = self._contract_map.get(name)
-        if contract_id is None:
-            raise TokenNotListed(self.VENUE, f"{token} not listed (looked up as {name!r})")
-        return contract_id
+        names = (f"{token.upper()}USDC", self._contract_name(token))
+        for name in names:
+            contract_id = self._contract_map.get(name)
+            if contract_id is not None:
+                return contract_id
+        raise TokenNotListed(self.VENUE, f"{token} not listed (looked up as {names!r})")
 
     # ------------------------------------------------------------------
     # Shared ticker (funding + OI + markPrice in one call)
@@ -143,7 +149,7 @@ class EdgeXClient(PerpDEXClient):
 
             try:
                 resp = await self.http.get(
-                    f"{API_BASE}/api/v1/public/quote/getTicker",
+                    f"{API_BASE}/api/v2/public/quote/getTicker",
                     params={"contractId": contract_id},
                     timeout=self.TIMEOUT,
                 )
@@ -179,7 +185,7 @@ class EdgeXClient(PerpDEXClient):
 
         try:
             resp = await self.http.get(
-                f"{API_BASE}/api/v1/public/quote/getDepth",
+                f"{API_BASE}/api/v2/public/quote/getDepth",
                 params={"contractId": contract_id, "level": 200},
                 timeout=self.TIMEOUT,
             )

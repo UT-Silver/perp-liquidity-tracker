@@ -15,6 +15,8 @@ Hourly cross-venue perp DEX slippage history, built on [yodablocks/perp-liquidit
 3. Slippage is no longer clamped at 0, so crossed or stale books show up instead of being hidden.
 4. The venue name is kept on unexpected errors (previously `unknown`). ApeX is excluded because its fetcher crashes under current httpx.
 
+**edgeX:** migrated to the V2 API (`edgex-prod-v2.edgex.exchange/api/v2`, contracts `{TOKEN}USDC`) on 2026-11-02, since the old `pro.edgex.exchange/api/v1` now returns web-page HTML.
+
 **Limits:** these are one-shot snapshots of resting depth, not realized fills. The Hyperliquid deep levels are price-bucketed approximations. Fees are base tier.
 
 Change tokens and sizes with the `TRACK_TOKENS` / `TRACK_CLIPS` env vars in the workflow. To run manually: Actions → hourly-slippage-snapshot → Run workflow.
