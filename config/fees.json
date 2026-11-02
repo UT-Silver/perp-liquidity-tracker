@@ -1,33 +1,24 @@
 {
-  "_comment": "Base-tier (no VIP, no staking discount) taker fees in bps. total_cost_bps = slippage_bps + taker_bps. Update these when venues change schedules; every run records the fee it used.",
+  "_comment": "Perp taker fees in bps. taker_bps = base tier (no volume tier, no token/staking discount). vip_taker_bps = best published taker rate (top volume tier + max token/staking discount) - market-maker scale, a floor rather than a typical active-trader rate. The dashboard prices all history from this file.",
   "venues": {
     "hyperliquid": {
-      "taker_bps": 4.5,
-      "note": "Base tier 0.045% taker; HYPE staking / volume tiers lower it."
+      "taker_bps": 4.5, "vip_taker_bps": 1.44,
+      "note": "Base 0.045%. Top: tier 6 (>$7B 14d weighted volume) 0.024% x Diamond staking (-40%, 500k+ HYPE) = 0.0144%."
     },
     "lighter": {
-      "taker_bps": 2.0,
-      "note": "Premium account taker 0.02% (low-latency tier institutions use). Standard accounts are 0% but carry a 200-300 ms taker speed bump whose cost a book snapshot cannot capture."
+      "taker_bps": 2.8, "vip_taker_bps": 1.96,
+      "note": "Premium account (low latency) 0.028% at 0 LIT staked; top staking discount -30% (verify on apidocs.lighter.xyz/docs/account-types). Standard accounts are 0% but carry a 200-300 ms taker speed bump whose cost a book snapshot cannot capture."
     },
     "aster": {
-      "taker_bps": 4.0,
-      "note": "Pro order book 0.04% taker base tier."
+      "taker_bps": 4.0, "vip_taker_bps": 1.6,
+      "note": "USDT perps 0.04%. Top VIP (14d volume + ASTER holdings) 0.016% per third-party summaries, Sept 2026 - verify."
     },
     "edgex": {
-      "taker_bps": 4.5,
-      "note": "defaultTakerFeeRate 0.00045 from V2 getMetaData (BTC/ETH/SOL/HYPE USDC perps), checked 2026-11-02."
+      "taker_bps": 4.5, "vip_taker_bps": 2.4,
+      "note": "V2 defaultTakerFeeRate 0.00045 (getMetaData, 2026-11-02). VIP 6 (30d >$2B) 0.024% is from the V1-era schedule (DefiLlama, May 2026) - unverified for V2."
     },
-    "paradex": {
-      "taker_bps": 0.0,
-      "note": "Upstream repo, May 2026 - re-verify."
-    },
-    "extended": {
-      "taker_bps": 2.5,
-      "note": "Upstream repo, May 2026 - re-verify."
-    },
-    "grvt": {
-      "taker_bps": 4.5,
-      "note": "Upstream repo, May 2026 - re-verify."
-    }
+    "paradex":  {"taker_bps": 0.0, "vip_taker_bps": 0.0, "note": "Upstream repo, May 2026 - re-verify. No VIP data."},
+    "extended": {"taker_bps": 2.5, "vip_taker_bps": 2.5, "note": "Upstream repo, May 2026 - re-verify. No VIP data, base used."},
+    "grvt":     {"taker_bps": 4.5, "vip_taker_bps": 4.5, "note": "Upstream repo, May 2026 - re-verify. No VIP data, base used."}
   }
 }

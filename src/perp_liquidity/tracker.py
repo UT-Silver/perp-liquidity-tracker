@@ -35,6 +35,11 @@ SLIPPAGE_COLS = [
 FUNDING_COLS = ["run_ts", "venue", "token", "rate_per_period", "period_hours", "apr_pct"]
 OI_COLS = ["run_ts", "venue", "token", "oi_base", "oi_usd", "mark_price"]
 ERROR_COLS = ["run_ts", "venue", "token", "kind", "message"]
+# Per-token slippage files (data/YYYY-MM/slippage/{TOKEN}.csv) keep each file
+# small enough for the dashboard to load only the tokens being viewed.
+# Fees are not stored: the dashboard prices history from config/fees.json.
+TOKEN_SLIP_COLS = ["run_ts", "venue", "side", "clip_usd", "mid_price", "spread_bps",
+                   "slippage_bps", "partial", "filled_usd", "book_depth_usd"]
 
 
 def load_fees() -> dict[str, float]:
@@ -65,7 +70,7 @@ async def snapshot(tokens: list[str], clips: list[float]):
 
 
 def main() -> int:
-    tokens = [t.strip().upper() for t in os.getenv("TRACK_TOKENS", "BTC,ETH,SOL,HYPE").split(",") if t.strip()]
+    tokens = [t.strip().upper() for t in os.getenv("TRACK_TOKENS", "BTC,ETH,SOL,HYPE,DOGE,XRP,PUMP,SUI,ENA,ZEC").split(",") if t.strip()]
     clips = [float(c) for c in os.getenv("TRACK_CLIPS", "10000,100000,500000,1000000").split(",")]
     data_dir = Path(os.getenv("DATA_DIR", "data"))
     fees = load_fees()
@@ -122,13 +127,14 @@ def main() -> int:
         for venue in rep.not_listed:
             err_rows.append({"run_ts": ts, "venue": venue, "token": rep.token, "kind": "not_listed", "message": ""})
 
-    _append(month_dir / "slippage.csv", SLIPPAGE_COLS, slip_rows)
+    for tok in tokens:
+        _append(month_dir / "slippage" / f"{tok}.csv", TOKEN_SLIP_COLS,
+                [{k: r[k] for k in TOKEN_SLIP_COLS} for r in slip_rows if r["token"] == tok])
     _append(month_dir / "funding.csv", FUNDING_COLS, fund_rows)
     _append(month_dir / "open_interest.csv", OI_COLS, oi_rows)
     _append(month_dir / "errors.csv", ERROR_COLS, err_rows)
     write_latest(data_dir / "latest.md", ts, tokens, clips, slip_rows, err_rows)
-    months = sorted(p.name for p in data_dir.iterdir() if p.is_dir() and (p / "slippage.csv").exists())
-    (data_dir / "manifest.json").write_text(json.dumps({"months": months, "updated": ts}) + "\n")
+    write_manifest(data_dir, ts)
 
     ok_venues = sorted({r["venue"] for r in slip_rows})
     print(f"[{ts}] rows: slippage={len(slip_rows)} funding={len(fund_rows)} oi={len(oi_rows)} errors={len(err_rows)}")
@@ -138,6 +144,20 @@ def main() -> int:
             print(f"  ERROR {e['venue']} {e['token']}: {e['message']}")
     # Fail the job only if nothing at all came back, so silent breakage is visible.
     return 0 if slip_rows else 1
+
+
+def write_manifest(data_dir: Path, updated: str) -> None:
+    """{"months": [...], "tokens": {"2026-11": ["BTC", ...]}, "updated": ts}"""
+    months, tokens = [], {}
+    for p in sorted(data_dir.iterdir()):
+        sd = p / "slippage"
+        if p.is_dir() and sd.is_dir():
+            toks = sorted(f.stem for f in sd.glob("*.csv"))
+            if toks:
+                months.append(p.name)
+                tokens[p.name] = toks
+    (data_dir / "manifest.json").write_text(
+        json.dumps({"months": months, "tokens": tokens, "updated": updated}) + "\n")
 
 
 def write_latest(path: Path, ts: str, tokens, clips, slip_rows, err_rows) -> None:

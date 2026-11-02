@@ -96,16 +96,16 @@ def test_tracker_writes_history(tmp_path, monkeypatch):
     assert tracker.main() == 0  # second run appends, header written once
 
     month = next(p for p in tmp_path.iterdir() if p.is_dir())
-    rows = list(csv.DictReader((month / "slippage.csv").open()))
+    rows = list(csv.DictReader((month / "slippage" / "BTC.csv").open()))
     assert len(rows) == 2 * 2 * 2  # runs x clips x sides
     r = next(r for r in rows if r["clip_usd"] == "100000" and r["side"] == "buy")
-    assert float(r["taker_bps"]) == 4.5
-    assert float(r["total_cost_bps"]) == pytest.approx(float(r["slippage_bps"]) + 4.5)
-    assert r["spread_bps"] != "" and r["book_fetched_at"] != ""
+    assert "token" not in r and "taker_bps" not in r  # token from filename, fees from config
+    assert r["spread_bps"] != "" and float(r["slippage_bps"]) >= 0
     big = next(r for r in rows if r["clip_usd"] == "5000000")
     assert big["partial"] == "True"  # stitched mock book holds ~$3.1M per side
     manifest = json.loads((tmp_path / "manifest.json").read_text())
     assert manifest["months"] == [month.name]
+    assert manifest["tokens"][month.name] == ["BTC"]
     latest = (tmp_path / "latest.md").read_text()
     assert "hyperliquid" in latest and "$100,000" in latest
 

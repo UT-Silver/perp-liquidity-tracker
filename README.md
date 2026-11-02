@@ -2,13 +2,13 @@
 
 Hourly cross-venue perp DEX slippage history, built on [yodablocks/perp-liquidity](https://github.com/yodablocks/perp-liquidity) (commit 33959f8).
 
-**What runs:** `.github/workflows/snapshot.yml` fires every 15 min and snapshots when the last snapshot is ≥45 min old (GitHub cron drops runs, so this keeps the series ~hourly), snapshots BTC / ETH / SOL / HYPE order books on Hyperliquid, Lighter, Aster, edgeX, Paradex, Extended and GRVT, and commits the results to `data/`.
+**What runs:** `.github/workflows/snapshot.yml` fires every 15 min and snapshots when the last snapshot is ≥45 min old (GitHub cron drops runs, so this keeps the series ~hourly), snapshots BTC / ETH / SOL / HYPE / XRP / DOGE / SUI / ENA / ZEC / PUMP order books on Hyperliquid, Lighter, Aster, edgeX, Paradex, Extended and GRVT, and commits the results to `data/`.
 
 **Chart:** https://ut-silver.github.io/perp-liquidity-tracker/ (static `index.html` reading `data/` on load, so it is always current; no build step).
 
 **Output:**
 - `data/latest.md`: latest table of total cost (slippage + base-tier taker fee, bps), averaged over buy and sell
-- `data/YYYY-MM/slippage.csv`: one row per run × venue × token × side × clip size ($10k / $100k / $500k / $1M)
+- `data/YYYY-MM/slippage/{TOKEN}.csv`: one row per run × venue × side × clip size ($10k / $100k / $500k / $1M); split per token so the dashboard loads only what it shows. Fees are not stored per row; the dashboard prices history from `config/fees.json` (base and top-tier taker).
 - `data/YYYY-MM/funding.csv`, `open_interest.csv`, `errors.csv`
 
 **Changes vs upstream:**
