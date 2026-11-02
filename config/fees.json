@@ -1,0 +1,12 @@
+{
+  "_comment": "Base-tier (no VIP, no staking discount) taker fees in bps. total_cost_bps = slippage_bps + taker_bps. Update these when venues change schedules; every run records the fee it used.",
+  "venues": {
+    "hyperliquid": {"taker_bps": 4.5, "note": "Base tier 0.045% taker; HYPE staking / volume tiers lower it."},
+    "lighter":     {"taker_bps": 0.0, "note": "Standard account 0% taker (has order latency speed bump); Premium accounts pay a fee."},
+    "aster":       {"taker_bps": 4.0, "note": "Pro order book 0.04% taker base tier."},
+    "edgex":       {"taker_bps": 3.8, "note": "defaultTakerFeeRate 0.00038 from getMetaData per upstream repo (May 2026) - re-verify."},
+    "paradex":     {"taker_bps": 0.0, "note": "Upstream repo, May 2026 - re-verify."},
+    "extended":    {"taker_bps": 2.5, "note": "Upstream repo, May 2026 - re-verify."},
+    "grvt":        {"taker_bps": 4.5, "note": "Upstream repo, May 2026 - re-verify."}
+  }
+}

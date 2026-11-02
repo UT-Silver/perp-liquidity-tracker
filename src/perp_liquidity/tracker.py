@@ -1,0 +1,164 @@
+"""Scheduled snapshot runner: append one row per (venue, token, side, clip) to
+monthly CSVs under data/, plus funding / OI, and rewrite data/latest.md.
+
+Usage (what the GitHub Action runs):
+    python -m perp_liquidity.tracker
+
+Env overrides:
+    TRACK_TOKENS  comma list, default BTC,ETH,SOL,HYPE
+    TRACK_CLIPS   comma list of USD sizes, default 10000,100000,500000,1000000
+    DATA_DIR      default ./data
+    FEES_PATH     default ./config/fees.json
+"""
+
+from __future__ import annotations
+
+import asyncio
+import csv
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+from perp_liquidity.cli import run_analysis
+
+# Paths are relative to the working directory (the repo root in CI), not the
+# installed package, so a plain `pip install .` still finds config/ and data/.
+DEFAULT_FEES_PATH = "config/fees.json"
+
+SLIPPAGE_COLS = [
+    "run_ts", "venue", "token", "side", "clip_usd", "mid_price", "spread_bps",
+    "slippage_bps", "taker_bps", "total_cost_bps", "partial", "filled_usd",
+    "book_depth_usd", "book_fetched_at",
+]
+FUNDING_COLS = ["run_ts", "venue", "token", "rate_per_period", "period_hours", "apr_pct"]
+OI_COLS = ["run_ts", "venue", "token", "oi_base", "oi_usd", "mark_price"]
+ERROR_COLS = ["run_ts", "venue", "token", "kind", "message"]
+
+
+def load_fees() -> dict[str, float]:
+    path = Path(os.getenv("FEES_PATH", DEFAULT_FEES_PATH))
+    data = json.loads(path.read_text())
+    return {k: float(v["taker_bps"]) for k, v in data["venues"].items()}
+
+
+def _append(path: Path, cols: list[str], rows: list[dict]) -> None:
+    if not rows:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    new = not path.exists()
+    with path.open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        if new:
+            w.writeheader()
+        w.writerows(rows)
+
+
+def _r(x: float | None, nd: int = 4):
+    return None if x is None else round(x, nd)
+
+
+async def snapshot(tokens: list[str], clips: list[float]):
+    reports = await asyncio.gather(*(run_analysis(t, clip_usds=clips) for t in tokens))
+    return reports
+
+
+def main() -> int:
+    tokens = [t.strip().upper() for t in os.getenv("TRACK_TOKENS", "BTC,ETH,SOL,HYPE").split(",") if t.strip()]
+    clips = [float(c) for c in os.getenv("TRACK_CLIPS", "10000,100000,500000,1000000").split(",")]
+    data_dir = Path(os.getenv("DATA_DIR", "data"))
+    fees = load_fees()
+
+    run_ts = datetime.now(timezone.utc).replace(microsecond=0)
+    ts = run_ts.isoformat()
+    month_dir = data_dir / run_ts.strftime("%Y-%m")
+
+    reports = asyncio.run(snapshot(tokens, clips))
+
+    slip_rows, fund_rows, oi_rows, err_rows = [], [], [], []
+    for rep in reports:
+        books = {ob.venue: ob for ob in rep.orderbooks}
+        for s in rep.slippage:
+            taker = fees.get(s.venue)
+            ob = books.get(s.venue)
+            slip_rows.append({
+                "run_ts": ts, "venue": s.venue, "token": s.token, "side": s.side,
+                "clip_usd": int(s.clip_usd), "mid_price": s.mid_price,
+                "spread_bps": _r(ob.spread_bps) if ob else None,
+                "slippage_bps": _r(s.slippage_bps),
+                "taker_bps": taker,
+                "total_cost_bps": None if taker is None else _r(s.slippage_bps + taker),
+                "partial": s.partial, "filled_usd": round(s.filled_usd, 2),
+                "book_depth_usd": round(s.book_depth_usd, 2),
+                "book_fetched_at": ob.fetched_at.replace(microsecond=0).isoformat() if ob else "",
+            })
+        for row in rep.funding:
+            fr = row.funding_rate
+            fund_rows.append({"run_ts": ts, "venue": fr.venue, "token": fr.token,
+                              "rate_per_period": fr.rate_per_period, "period_hours": fr.period_hours,
+                              "apr_pct": _r(fr.apr_annualized, 3)})
+        for row in rep.oi:
+            oi = row.open_interest
+            oi_rows.append({"run_ts": ts, "venue": oi.venue, "token": oi.token,
+                            "oi_base": oi.oi_base, "oi_usd": round(oi.oi_usd, 0),
+                            "mark_price": oi.mark_price})
+        for venue, msg in rep.failures:
+            err_rows.append({"run_ts": ts, "venue": venue, "token": rep.token, "kind": "error", "message": msg[:300]})
+        for venue in rep.not_listed:
+            err_rows.append({"run_ts": ts, "venue": venue, "token": rep.token, "kind": "not_listed", "message": ""})
+
+    _append(month_dir / "slippage.csv", SLIPPAGE_COLS, slip_rows)
+    _append(month_dir / "funding.csv", FUNDING_COLS, fund_rows)
+    _append(month_dir / "open_interest.csv", OI_COLS, oi_rows)
+    _append(month_dir / "errors.csv", ERROR_COLS, err_rows)
+    write_latest(data_dir / "latest.md", ts, tokens, clips, slip_rows, err_rows)
+
+    ok_venues = sorted({r["venue"] for r in slip_rows})
+    print(f"[{ts}] rows: slippage={len(slip_rows)} funding={len(fund_rows)} oi={len(oi_rows)} errors={len(err_rows)}")
+    print(f"venues with data: {', '.join(ok_venues) or 'NONE'}")
+    for e in err_rows:
+        if e["kind"] == "error":
+            print(f"  ERROR {e['venue']} {e['token']}: {e['message']}")
+    # Fail the job only if nothing at all came back, so silent breakage is visible.
+    return 0 if slip_rows else 1
+
+
+def write_latest(path: Path, ts: str, tokens, clips, slip_rows, err_rows) -> None:
+    lines = [f"# Perp slippage snapshot — {ts}", "",
+             "Total cost = slippage vs mid + base-tier taker fee, in bps, averaged over buy & sell. "
+             "`*` = book snapshot too shallow to fill the clip.", ""]
+    for tok in tokens:
+        rows = [r for r in slip_rows if r["token"] == tok]
+        if not rows:
+            continue
+        venues = sorted({r["venue"] for r in rows})
+        lines.append(f"## {tok}")
+        lines.append("")
+        hdr = "| venue | spread bps | " + " | ".join(f"${int(c):,}" for c in clips) + " |"
+        lines.append(hdr)
+        lines.append("|" + "---|" * (2 + len(clips)))
+        for v in venues:
+            vr = [r for r in rows if r["venue"] == v]
+            cells = []
+            for c in clips:
+                cr = [r for r in vr if r["clip_usd"] == int(c)]
+                if not cr or any(r["total_cost_bps"] is None for r in cr):
+                    cells.append("n/a")
+                    continue
+                avg = sum(r["total_cost_bps"] for r in cr) / len(cr)
+                star = "*" if any(r["partial"] for r in cr) else ""
+                cells.append(f"{avg:.2f}{star}")
+            spread = vr[0]["spread_bps"]
+            lines.append(f"| {v} | {'' if spread is None else f'{spread:.2f}'} | " + " | ".join(cells) + " |")
+        lines.append("")
+    errs = [e for e in err_rows if e["kind"] == "error"]
+    if errs:
+        lines.append("## Errors")
+        lines += [f"- {e['venue']} / {e['token']}: {e['message']}" for e in errs]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

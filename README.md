@@ -1,0 +1,244 @@
+# perp-liquidity-tracker
+
+Hourly cross-venue perp DEX slippage history, built on [yodablocks/perp-liquidity](https://github.com/yodablocks/perp-liquidity) (commit 33959f8).
+
+**What runs:** `.github/workflows/snapshot.yml` runs every hour at :17 UTC, snapshots BTC / ETH / SOL / HYPE order books on Hyperliquid, Lighter, Aster, edgeX, Paradex, Extended and GRVT, and commits the results to `data/`.
+
+**Output:**
+- `data/latest.md`: latest table of total cost (slippage + base-tier taker fee, bps), averaged over buy and sell
+- `data/YYYY-MM/slippage.csv`: one row per run × venue × token × side × clip size ($10k / $100k / $500k / $1M)
+- `data/YYYY-MM/funding.csv`, `open_interest.csv`, `errors.csv`
+
+**Changes vs upstream:**
+1. Fees are applied: `config/fees.json` → `taker_bps`, `total_cost_bps` (upstream had a fees file that nothing read).
+2. Deeper books: Hyperliquid stitches the full-precision book (max 20 levels) with `nSigFigs=4` and `3` aggregated books; Lighter limit 50→250; Aster 50→500. `book_depth_usd` records how much was captured, and `partial=True` means the clip was not fully filled.
+3. Slippage is no longer clamped at 0, so crossed or stale books show up instead of being hidden.
+4. The venue name is kept on unexpected errors (previously `unknown`). ApeX is excluded because its fetcher crashes under current httpx.
+
+**Limits:** these are one-shot snapshots of resting depth, not realized fills. The Hyperliquid deep levels are price-bucketed approximations. Fees are base tier.
+
+Change tokens and sizes with the `TRACK_TOKENS` / `TRACK_CLIPS` env vars in the workflow. To run manually: Actions → hourly-slippage-snapshot → Run workflow.
+
+---
+
+## Upstream README
+
+# perp-liquidity
+
+Cross-venue liquidity comparison across 8 perpetual DEX venues: order book depth, slippage, funding rates, and open interest — from public APIs, via the command line.
+
+No dashboard, no AI insights, no execution — just clean data from the order book.
+
+## Venues
+
+| Venue | Orderbook | Funding | OI | Liquidations | Funding period |
+|---|---|---|---|---|---|
+| Hyperliquid | ✅ | ✅ | ✅ | ✅ WS tail | 1h |
+| Paradex | ✅ | ✅ | ✅ | ❌ auth required | 8h |
+| Lighter | ✅ | ✅ | ✅ | ✅ WS tail | 1h |
+| Aster | ✅ | ✅ | ✅ | ❌ no public feed | 8h |
+| Extended | ✅ | ✅ | ✅ | ✅ WS tail | 1h |
+| EdgeX | ✅ | ✅ | ✅ | ❌ private WS only | 4h |
+| ApeX | ✅ | ✅ | ✅ | ❌ private WS only | 1h |
+| GRVT | ✅ | ✅ | ✅ | ❌ no liquidation flag | 8h |
+
+Documented gaps are preferred over fake coverage. Each fetcher declares what it actually supports via a `Coverage` enum.
+
+## Install
+
+```bash
+git clone https://github.com/yodablocks/perp-liquidity
+cd perp-liquidity
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+## Usage
+
+```bash
+perp-liquidity --token BTC
+```
+
+Optional flags:
+
+```bash
+# Custom clip sizes (USD)
+perp-liquidity --token BTC --clip 10000,100000,500000
+
+# Write CSV output to a directory
+perp-liquidity --token BTC --csv out/
+```
+
+## Sample output
+
+Full CSV snapshots from a live BTC run: [`examples/`](examples/)
+
+```
+Perp Liquidity Snapshot — BTC  [2026-05-28 14:27:18 UTC]
+========================================================================
+
+Funding Rate (APR, annualized)  [rank 1 = most negative]
+  Venue            Period    Rate/period          APR
+  ----------------------------------------------------
+  aster               8h      0.000019        2.07%  #1
+  paradex             8h      0.000100       10.95%  #2
+  hyperliquid         1h      0.000013       10.95%  #3
+  edgex               4h      0.000050       10.95%  #4
+  apex                1h      0.000013       10.95%  #5
+  extended            1h      0.000013       11.39%  #6
+  lighter             1h      0.000096       84.10%  #7
+  grvt                8h      0.010000     1095.00%  #8
+
+  Cross-venue spread: 109292.9 bps APR
+
+Open Interest (USD)
+  Venue                  OI (USD)    Share   Rank
+  ------------------------------------------------
+  hyperliquid    $ 2,391,367,560    65.5%  #1
+  aster          $   406,508,822    11.1%  #2
+  edgex          $   302,853,176     8.3%  #3
+  grvt           $   196,111,898     5.4%  #4
+  lighter        $   143,128,524     3.9%  #5
+  apex           $   110,294,228     3.0%  #6
+  extended       $    93,766,168     2.6%  #7
+  paradex        $     7,039,467     0.2%  #8
+
+  Total tracked OI: $3,651,069,841
+
+Slippage (bps vs mid)  [* = partial fill]
+  Venue           Side   $  1,000  $ 10,000  $100,000  $500,000
+  -----------------------------------------------------------------------
+  apex            buy         0.12       0.12       0.12       0.12
+  apex            sell        0.12       0.12       0.12       0.13
+  aster           buy         0.34       0.36       0.36       0.50
+  aster           sell       0.007      0.007      0.008       0.43
+  edgex           buy         0.12       0.16       0.26       0.43
+  edgex           sell        0.12       0.23       0.26       0.34
+  extended        buy         0.07       0.07       0.07       0.07
+  extended        sell        0.07       0.07       0.07       0.16
+  grvt            buy        0.007      0.007      0.007       0.15
+  grvt            sell       0.007      0.007      0.007       0.14
+  hyperliquid     buy         0.20       0.70       0.83       1.12
+  hyperliquid     sell        0.07       0.07       0.07       0.07
+  lighter         buy        0.007       0.30       1.28       1.91
+  lighter         sell       0.007       0.14       0.40       0.82
+  paradex         buy         0.56       1.13       1.86       3.56
+  paradex         sell        0.56       0.56       1.88      11.35
+```
+
+## Methodology
+
+### Slippage
+
+Walk the order book levels in execution order (asks for buy, bids for sell), accumulating USD notional until the clip size is filled. Effective price is the weighted average fill price across all consumed levels. Slippage in bps is measured against the mid price at snapshot time.
+
+```
+slippage_bps (buy)  = (effective_price - mid) / mid × 10,000
+slippage_bps (sell) = (mid - effective_price) / mid × 10,000
+```
+
+A `*` suffix means the book was exhausted before the clip was filled — the reported slippage covers only the partial fill.
+
+### Funding rate
+
+Each venue has a different funding interval (1h, 4h, or 8h). Rates are annualized using:
+
+```
+APR = rate_per_period × (8760 / period_hours)
+```
+
+This makes cross-venue comparison meaningful regardless of settlement frequency. The raw `rate_per_period` is also shown.
+
+> **Note on GRVT:** GRVT's funding rate of 1095% APR reflects its rate cap being hit during bootstrapping, not a typical market condition. Treat it as a signal of low liquidity rather than a tradeable opportunity.
+
+### Open interest
+
+All venues report OI in base asset (e.g. BTC). USD conversion uses the current mark price from the same API call.
+
+## Architecture
+
+```
+src/perp_liquidity/
+├── fetchers/
+│   ├── base.py           # PerpDEXClient ABC, dataclasses, Coverage enum, error hierarchy
+│   ├── hyperliquid.py
+│   ├── paradex.py
+│   ├── lighter.py
+│   ├── aster.py
+│   ├── extended.py
+│   ├── edgex.py
+│   ├── apex.py
+│   └── grvt.py
+├── analyzers/
+│   ├── slippage.py       # compute_slippage, compute_slippage_multi
+│   ├── funding.py        # rank_funding, detect_flips
+│   ├── open_interest.py  # rank_open_interest
+│   └── liquidations.py   # summarize_liquidations → LiquidationSummary
+├── cli.py                # run_analysis, main()
+└── output.py             # format_report, write_csv
+```
+
+Each fetcher is an async context manager backed by `httpx.AsyncClient`. The CLI fetches all venues concurrently via `asyncio.gather` and absorbs per-venue errors — a single unavailable venue does not abort the run.
+
+Error hierarchy: `FetcherError` → `VenueUnavailable` (API failure) | `TokenNotListed` (token not traded there).
+
+## Using as a library
+
+`perp-liquidity` is installable as a pip dependency for use in other projects:
+
+```bash
+pip install -e ./perp-liquidity        # local
+pip install git+https://github.com/yodablocks/perp-liquidity
+```
+
+Run the full analysis pipeline programmatically:
+
+```python
+import asyncio
+from perp_liquidity.cli import run_analysis
+
+report = asyncio.run(run_analysis("BTC"))
+
+# Funding rates — ranked by APR ascending (most negative = rank 1)
+for row in report.funding:
+    print(f"{row.funding_rate.venue}: {row.funding_rate.apr_annualized:+.2f}% APR (rank {row.rank})")
+
+# OI dominance — ranked by USD descending
+for row in report.oi:
+    print(f"{row.open_interest.venue}: ${row.open_interest.oi_usd:,.0f} ({row.market_share_pct:.1f}%)")
+```
+
+Key dataclasses (all frozen, all carry `fetched_at`):
+
+| Class | Fields |
+|---|---|
+| `FundingRate` | `venue`, `token`, `rate_per_period`, `period_hours`, `apr_annualized` |
+| `OpenInterest` | `venue`, `token`, `oi_base`, `oi_usd`, `mark_price` |
+| `Liquidation` | `venue`, `token`, `side`, `price`, `qty_base`, `qty_usd`, `occurred_at` |
+| `OrderBook` | `venue`, `token`, `bids`, `asks`, `mid_price` |
+
+## Known limitations
+
+- **ApeX geo-block**: `omni.apex.exchange` resolves to `127.0.0.1` on some ISPs (confirmed on French residential connections). The fetcher works around this automatically via `DNSOverrideTransport`, which routes TCP to the real IP while preserving TLS SNI — no `/etc/hosts` or `sudo` required.
+- **Liquidations**: only 3 venues (Hyperliquid, Lighter, Extended) expose liquidations publicly. The other 5 require authenticated private streams. Gaps are declared explicitly via `Coverage.NOT_AVAILABLE`.
+- **Lighter OI**: uses `last_trade_price` as a mark price proxy (no dedicated mark price endpoint).
+- **Snapshot-only**: this tool takes one-shot snapshots. It is not a streaming feed and does not persist history.
+- **Public APIs only**: no Kaiko, Amberdata, or authenticated endpoints.
+
+## Development
+
+```bash
+# Run all tests (138 tests)
+pytest
+
+# Run a specific venue
+pytest tests/test_extended.py -v
+
+# Type-check
+mypy src/
+
+# Lint
+ruff check src/ tests/
+```
+
+Tests use `httpx.MockTransport` for all REST calls — no real network required. WS venues (Hyperliquid, Lighter, Extended liquidations) are tested via async mock fixtures.
