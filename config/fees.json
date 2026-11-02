@@ -7,7 +7,7 @@
     },
     "lighter": {
       "taker_bps": 2.0,
-      "note": "Premium account taker 0.02% (low-latency tier used by active/API traders). Standard account is 0% but carries a 200-300 ms taker speed bump whose adverse-selection cost a book snapshot cannot see."
+      "note": "Premium account taker 0.02% (low-latency tier institutions use). Standard accounts are 0% but carry a 200-300 ms taker speed bump whose cost a book snapshot cannot capture."
     },
     "aster": {
       "taker_bps": 4.0,
