@@ -5,11 +5,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for host in pro.edgex.exchange api.edgex.exchange edgex.exchange; do
-            for p in "api/v2/public/meta/getMetaData" "api/v2/public/quote/getDepth?contractId=10000001&level=200" "api/v2/public/quote/getTicker?contractId=10000001" "api/v2/public/funding/getLatestFundingRate?contractId=10000001"; do
-              u="https://$host/$p"
-              code=$(curl -sS -m 15 -o body -w "%{http_code} %{content_type}" "$u" 2>&1 || true)
-              echo "== $u -> $code"
-              head -c 600 body | tr -d '\n'; echo
-            done
+          curl -sS -m 20 https://pro.edgex.exchange/ -o home.html
+          grep -oE '(src|href)="[^"]+\.js"' home.html | sed -E 's/.*="([^"]+)"/\1/' | head -20 > js.txt
+          cat js.txt
+          : > hosts.txt
+          while read -r s; do
+            case "$s" in http*) u="$s";; //*) u="https:$s";; *) u="https://pro.edgex.exchange/${s#/}";; esac
+            curl -sS -m 20 "$u" -o b.js || continue
+            grep -oE 'https?://[a-zA-Z0-9.-]*edgex[a-zA-Z0-9.-]*' b.js >> hosts.txt || true
+            grep -oE '"[a-zA-Z0-9./-]*/api/v[12]/public[a-zA-Z0-9/_-]*' b.js | head -5 >> hosts.txt || true
+          done < js.txt
+          echo "== hosts"; sort | uniq -c < hosts.txt | sort -rn | head -40
+          echo "== try candidates"
+          for h in $(grep -oE 'https?://[a-zA-Z0-9.-]*edgex[a-zA-Z0-9.-]*' hosts.txt | sort -u); do
+            code=$(curl -sS -m 10 -o r -w "%{http_code} %{content_type}" "$h/api/v1/public/meta/getServerTime" 2>&1 || true)
+            echo "$h v1 -> $code $(head -c 120 r | tr -d '\n')"
+            code=$(curl -sS -m 10 -o r -w "%{http_code} %{content_type}" "$h/api/v2/public/meta/getServerTime" 2>&1 || true)
+            echo "$h v2 -> $code $(head -c 120 r | tr -d '\n')"
           done
