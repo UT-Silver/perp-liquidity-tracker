@@ -104,5 +104,7 @@ def test_tracker_writes_history(tmp_path, monkeypatch):
     assert r["spread_bps"] != "" and r["book_fetched_at"] != ""
     big = next(r for r in rows if r["clip_usd"] == "5000000")
     assert big["partial"] == "True"  # stitched mock book holds ~$3.1M per side
+    manifest = json.loads((tmp_path / "manifest.json").read_text())
+    assert manifest["months"] == [month.name]
     latest = (tmp_path / "latest.md").read_text()
     assert "hyperliquid" in latest and "$100,000" in latest

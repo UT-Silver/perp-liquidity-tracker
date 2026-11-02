@@ -113,6 +113,8 @@ def main() -> int:
     _append(month_dir / "open_interest.csv", OI_COLS, oi_rows)
     _append(month_dir / "errors.csv", ERROR_COLS, err_rows)
     write_latest(data_dir / "latest.md", ts, tokens, clips, slip_rows, err_rows)
+    months = sorted(p.name for p in data_dir.iterdir() if p.is_dir() and (p / "slippage.csv").exists())
+    (data_dir / "manifest.json").write_text(json.dumps({"months": months, "updated": ts}) + "\n")
 
     ok_venues = sorted({r["venue"] for r in slip_rows})
     print(f"[{ts}] rows: slippage={len(slip_rows)} funding={len(fund_rows)} oi={len(oi_rows)} errors={len(err_rows)}")

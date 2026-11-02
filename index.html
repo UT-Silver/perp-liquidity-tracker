@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perp DEX 开仓成本追踪</title>
+<style>
+.viz-root {
+  color-scheme: light;
+  --surface-0: #f4f4f2; --surface-1: #fcfcfb; --border: #e3e2de; --grid: #ecebe7;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7c7b76;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  .viz-root {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2c; --grid: #262624;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.viz-root { background: var(--surface-0); color: var(--text-primary); min-height: 100vh;
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; padding: 24px; }
+.wrap { max-width: 1120px; margin: 0 auto; }
+h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+.sub { color: var(--text-secondary); margin: 0 0 18px; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; margin-bottom: 14px; }
+.ctl label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-1); }
+.seg button { border: 0; background: transparent; color: var(--text-secondary); padding: 6px 11px; font: inherit; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 16px 10px; }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+.card .note { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 8px; }
+.legend button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 2px 0;
+  color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; }
+.legend button[aria-pressed="false"] { color: var(--text-muted); text-decoration: line-through; opacity: .55; }
+.sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.chart { position: relative; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+.axis text { fill: var(--text-muted); font-size: 11px; }
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 170px; display: none; }
+.tip .t { color: var(--text-muted); margin-bottom: 4px; }
+.tip .r { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.tip .r span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.tip .v { font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+.foot button { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary); border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 10px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--text-muted); font-weight: 500; }
+.tablewrap { max-height: 360px; overflow: auto; display: none; }
+.status { color: var(--text-muted); padding: 40px 0; text-align: center; }
+a { color: var(--s1); }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<div class="wrap">
+  <h1>Perp DEX 开仓成本追踪</h1>
+  <p class="sub">每小时快照一次。成本 = 逐档吃单的滑点（相对 mid）+ 基础档 taker 费，单位 bps。数据：<a href="https://github.com/UT-Silver/perp-liquidity-tracker/tree/main/data">data/</a></p>
+
+  <div class="controls">
+    <div class="ctl"><label>币种</label><div class="seg" id="token"></div></div>
+    <div class="ctl"><label>单量</label><div class="seg" id="clip"></div></div>
+    <div class="ctl"><label>方向</label><div class="seg" id="side"></div></div>
+    <div class="ctl"><label>指标</label><div class="seg" id="metric"></div></div>
+    <div class="ctl"><label>时间范围</label><div class="seg" id="range"></div></div>
+    <div class="ctl"><label>纵轴</label><div class="seg" id="scale"></div></div>
+  </div>
+
+  <div class="card">
+    <h2 id="title">—</h2>
+    <p class="note" id="note"></p>
+    <div class="legend" id="legend"></div>
+    <div class="chart" id="chart"><div class="status">加载数据中…</div></div>
+    <div class="foot">
+      <span id="meta"></span>
+      <button id="toggleTable" type="button">显示数据表</button>
+    </div>
+    <div class="tablewrap" id="tablewrap"></div>
+  </div>
+</div>
+</div>
+
+<script>
+// Venue -> fixed categorical slot (color follows the entity, never its rank).
+const VENUES = ["hyperliquid","lighter","aster","edgex","extended","paradex","grvt"];
+const SLOT = {hyperliquid:1, lighter:2, aster:3, edgex:4, extended:5, paradex:6, grvt:7};
+const LABEL = {hyperliquid:"Hyperliquid", lighter:"Lighter", aster:"Aster", edgex:"edgeX", extended:"Extended", paradex:"Paradex", grvt:"GRVT"};
+const DEFAULT_ON = new Set(["hyperliquid","lighter","aster","edgex"]);
+const METRICS = {
+  total_cost_bps: {label:"总成本", unit:"bps", desc:"滑点 + taker 费"},
+  slippage_bps:   {label:"仅滑点", unit:"bps", desc:"不含手续费"},
+  spread_bps:     {label:"买卖价差", unit:"bps", desc:"与单量无关"},
+  book_depth_usd: {label:"盘口深度", unit:"$", desc:"本次快照抓到的单边挂单总额（各家抓取范围不同，只适合看同一家随时间的变化，不适合横向比较）"},
+};
+const RANGES = {"24h":24, "7d":168, "30d":720, "all":Infinity};
+const state = {token:"BTC", clip:1000000, side:"avg", metric:"total_cost_bps", range:"7d", scale:"lin", on:new Set(DEFAULT_ON), table:false};
+let ROWS = [];
+
+const css = n => getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(n).trim();
+const color = v => css(`--s${SLOT[v]}`);
+const fmtClip = c => c >= 1e6 ? `$${c/1e6}M` : `$${c/1e3}k`;
+const fmtVal = (v, m) => v == null || isNaN(v) ? "—" : m === "book_depth_usd"
+  ? (v >= 1e6 ? `$${(v/1e6).toFixed(1)}M` : `$${(v/1e3).toFixed(0)}k`) : Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
+const fmtTime = d => d.toLocaleString("zh-CN", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit", hour12:false});
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/); const head = lines.shift().split(",");
+  return lines.map(l => { const c = l.split(","); const o = {}; head.forEach((h,i) => o[h] = c[i]); return o; });
+}
+
+async function load() {
+  let months;
+  try { months = (await (await fetch("data/manifest.json", {cache:"no-store"})).json()).months; }
+  catch { months = [new Date().toISOString().slice(0,7)]; }
+  const texts = await Promise.all(months.map(m => fetch(`data/${m}/slippage.csv`, {cache:"no-store"}).then(r => r.ok ? r.text() : "")));
+  ROWS = texts.filter(Boolean).flatMap(parseCSV).map(r => ({
+    t: new Date(r.run_ts), venue: r.venue, token: r.token, side: r.side, clip: +r.clip_usd,
+    total_cost_bps: r.total_cost_bps === "" ? null : +r.total_cost_bps,
+    slippage_bps: +r.slippage_bps, spread_bps: r.spread_bps === "" ? null : +r.spread_bps,
+    book_depth_usd: +r.book_depth_usd, partial: r.partial === "True",
+  }));
+  buildControls(); render();
+}
+
+function seg(id, opts, key, cast = x => x) {
+  const el = document.getElementById(id); el.innerHTML = "";
+  for (const [val, text] of opts) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = text;
+    b.setAttribute("aria-pressed", String(state[key] === cast(val)));
+    b.onclick = () => { state[key] = cast(val); buildControls(); render(); };
+    el.appendChild(b);
+  }
+}
+
+function buildControls() {
+  const tokens = [...new Set(ROWS.map(r => r.token))];
+  const clips = [...new Set(ROWS.map(r => r.clip))].sort((a,b) => a-b);
+  if (!tokens.includes(state.token) && tokens.length) state.token = tokens[0];
+  if (!clips.includes(state.clip) && clips.length) state.clip = clips[clips.length-1];
+  seg("token", tokens.map(t => [t,t]), "token");
+  seg("clip", clips.map(c => [c, fmtClip(c)]), "clip", Number);
+  seg("side", [["avg","买卖平均"],["buy","买"],["sell","卖"]], "side");
+  seg("metric", Object.entries(METRICS).map(([k,v]) => [k, v.label]), "metric");
+  seg("range", Object.keys(RANGES).map(k => [k, k === "all" ? "全部" : k]), "range");
+  seg("scale", [["lin","线性"],["log","对数"]], "scale");
+  const lg = document.getElementById("legend"); lg.innerHTML = "";
+  for (const v of VENUES) {
+    if (!ROWS.some(r => r.venue === v)) continue;
+    const b = document.createElement("button"); b.type = "button";
+    b.setAttribute("aria-pressed", String(state.on.has(v)));
+    b.innerHTML = `<span class="sw" style="background:${color(v)}"></span>${LABEL[v]}`;
+    b.onclick = () => { state.on.has(v) ? state.on.delete(v) : state.on.add(v); buildControls(); render(); };
+    lg.appendChild(b);
+  }
+}
+
+function series() {
+  const m = state.metric, sizeFree = m === "spread_bps";
+  const latest = Math.max(...ROWS.map(r => +r.t));
+  const cutoff = latest - RANGES[state.range] * 3600e3;
+  const rows = ROWS.filter(r => r.token === state.token && (sizeFree || r.clip === state.clip) && +r.t >= cutoff
+    && (state.side === "avg" || r.side === state.side));
+  const out = {};
+  for (const v of VENUES) {
+    const byT = new Map();
+    for (const r of rows) if (r.venue === v) {
+      const k = +r.t; const e = byT.get(k) || {sum:0, n:0, partial:false};
+      if (r[m] != null && !isNaN(r[m])) { e.sum += r[m]; e.n++; } e.partial ||= r.partial; byT.set(k, e);
+    }
+    const pts = [...byT].filter(([,e]) => e.n).map(([t,e]) => ({t, v: e.sum/e.n, partial: e.partial})).sort((a,b) => a.t-b.t);
+    if (pts.length) out[v] = pts;
+  }
+  return out;
+}
+
+function niceTicks(lo, hi, n = 5) {
+  if (hi <= lo) hi = lo + 1;
+  const step0 = (hi - lo) / n, mag = 10 ** Math.floor(Math.log10(step0));
+  const step = [1,2,2.5,5,10].map(s => s*mag).find(s => s >= step0);
+  const ticks = []; let x = Math.floor(lo/step)*step;
+  while (true) { ticks.push(+x.toFixed(10)); if (x >= hi - 1e-9) break; x += step; }
+  return ticks;
+}
+
+function render() {
+  const m = state.metric, meta = METRICS[m];
+  const sideTxt = {avg:"买卖平均", buy:"买入", sell:"卖出"}[state.side];
+  document.getElementById("title").textContent =
+    `${state.token} · ${m === "spread_bps" ? "" : fmtClip(state.clip) + " · "}${meta.label}（${sideTxt}）`;
+  document.getElementById("note").textContent = `${meta.desc}。空心点 = 这次抓到的盘口不够成交整笔单，数值偏乐观。点图例可开关交易所。`;
+
+  const all = series(); const vis = Object.fromEntries(Object.entries(all).filter(([v]) => state.on.has(v)));
+  const chart = document.getElementById("chart");
+  const runs = new Set(ROWS.map(r => +r.t)).size;
+  document.getElementById("meta").textContent = ROWS.length
+    ? `共 ${runs} 次快照，最新 ${fmtTime(new Date(Math.max(...ROWS.map(r => +r.t))))}（本地时间）` : "";
+  renderTable(all);
+  const pts = Object.values(vis).flat();
+  if (!pts.length) { chart.innerHTML = `<div class="status">${ROWS.length ? "当前筛选没有数据" : "还没有数据"}</div>`; return; }
+
+  const W = 1080, H = 400, M = {l: 56, r: 92, t: 10, b: 30};
+  const tMin = Math.min(...pts.map(p => p.t)), tMax = Math.max(...pts.map(p => p.t));
+  const vMax = Math.max(...pts.map(p => p.v)), vMin = Math.min(0, ...pts.map(p => p.v));
+  const positive = pts.filter(p => p.v > 0).map(p => p.v);
+  const useLog = state.scale === "log" && positive.length > 0;
+  let yt, Y;
+  const plotH = H - M.t - M.b;
+  if (useLog) {
+    const lo = Math.floor(Math.log10(Math.min(...positive))), hi = Math.ceil(Math.log10(vMax));
+    yt = []; for (let e = lo; e <= Math.max(hi, lo + 1); e++) for (const k of [1, 2, 5]) { const v = k * 10 ** e; if (v >= 10 ** lo && v <= 10 ** Math.max(hi, lo + 1)) yt.push(v); }
+    const L0 = Math.log10(yt[0]), L1 = Math.log10(yt[yt.length-1]);
+    Y = v => M.t + (1 - (Math.log10(Math.max(v, yt[0])) - L0) / (L1 - L0)) * plotH;
+  } else {
+    yt = niceTicks(vMin, vMax * 1.05);
+    const y0 = yt[0], y1 = yt[yt.length-1];
+    Y = v => M.t + (1 - (v - y0) / (y1 - y0)) * plotH;
+  }
+  const X = t => M.l + (tMax === tMin ? (W-M.l-M.r)/2 : (t - tMin) / (tMax - tMin) * (W - M.l - M.r));
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${document.getElementById("title").textContent}">`;
+  s += `<g class="axis">`;
+  for (const v of yt) s += `<line class="gridline" x1="${M.l}" x2="${W-M.r}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${M.l-8}" y="${Y(v)+4}" text-anchor="end">${fmtVal(v, m)}</text>`;
+  const nx = Math.min(6, new Set(pts.map(p => p.t)).size);
+  for (let i = 0; i < nx; i++) {
+    const t = nx === 1 ? tMin : tMin + (tMax - tMin) * i / (nx - 1);
+    s += `<text x="${X(t)}" y="${H-8}" text-anchor="middle">${fmtTime(new Date(t))}</text>`;
+  }
+  s += `</g>`;
+  // lines, then markers (2px surface ring on overlapping marks)
+  const order = VENUES.filter(v => vis[v]);
+  for (const v of order) {
+    const p = vis[v];
+    if (p.length > 1) s += `<path d="${p.map((q,i) => `${i?"L":"M"}${X(q.t).toFixed(1)},${Y(q.v).toFixed(1)}`).join("")}" fill="none" stroke="${color(v)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  for (const v of order) for (const q of vis[v]) {
+    if (vis[v].length > 1 && !q.partial && vis[v].length > 48) continue; // dense: line only
+    s += `<circle cx="${X(q.t)}" cy="${Y(q.v)}" r="4" fill="${q.partial ? css("--surface-1") : color(v)}" stroke="${q.partial ? color(v) : css("--surface-1")}" stroke-width="2"/>`;
+  }
+  // direct labels at line ends (<=4 series), nudged apart to avoid collisions
+  if (order.length <= 4) {
+    const ends = order.map(v => ({v, y: Y(vis[v][vis[v].length-1].v), x: X(vis[v][vis[v].length-1].t)})).sort((a,b) => a.y-b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i-1].y < 14) ends[i].y = ends[i-1].y + 14;
+    for (const e of ends) s += `<text x="${e.x + 10}" y="${e.y + 4}" font-size="12" fill="${css("--text-secondary")}">${LABEL[e.v]}</text>`;
+  }
+  s += `<line id="xh" y1="${M.t}" y2="${H-M.b}" stroke="${css("--text-muted")}" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>`;
+  s += `<rect id="hit" x="${M.l}" y="${M.t}" width="${W-M.l-M.r}" height="${H-M.t-M.b}" fill="transparent"/></svg><div class="tip" id="tip"></div>`;
+  chart.innerHTML = s;
+
+  const svg = chart.querySelector("svg"), tip = document.getElementById("tip"), xh = document.getElementById("xh");
+  const times = [...new Set(pts.map(p => p.t))].sort((a,b) => a-b);
+  const move = ev => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    const t = times.reduce((a,b) => Math.abs(X(b)-px) < Math.abs(X(a)-px) ? b : a);
+    xh.setAttribute("x1", X(t)); xh.setAttribute("x2", X(t)); xh.setAttribute("visibility", "visible");
+    const rowsAt = order.map(v => [v, vis[v].find(q => q.t === t)]).filter(([,q]) => q).sort((a,b) => b[1].v - a[1].v);
+    tip.innerHTML = `<div class="t">${fmtTime(new Date(t))}</div>` + rowsAt.map(([v,q]) =>
+      `<div class="r"><span><span class="sw" style="background:${color(v)}"></span>${LABEL[v]}</span><span class="v">${fmtVal(q.v, m)}${q.partial ? " *" : ""}</span></div>`).join("");
+    tip.style.display = "block";
+    const left = X(t) * r.width / W; const tw = tip.offsetWidth;
+    tip.style.left = (left + 14 + tw > r.width ? left - tw - 14 : left + 14) + "px";
+    tip.style.top = "8px";
+  };
+  const hit = document.getElementById("hit");
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); });
+}
+
+function renderTable(all) {
+  const wrap = document.getElementById("tablewrap");
+  wrap.style.display = state.table ? "block" : "none";
+  document.getElementById("toggleTable").textContent = state.table ? "隐藏数据表" : "显示数据表";
+  if (!state.table) return;
+  const venues = VENUES.filter(v => all[v]);
+  const times = [...new Set(venues.flatMap(v => all[v].map(p => p.t)))].sort((a,b) => b-a);
+  let h = `<table><thead><tr><th>时间</th>${venues.map(v => `<th>${LABEL[v]}</th>`).join("")}</tr></thead><tbody>`;
+  for (const t of times) h += `<tr><td>${fmtTime(new Date(t))}</td>${venues.map(v => {
+    const q = all[v].find(p => p.t === t); return `<td>${q ? fmtVal(q.v, state.metric) + (q.partial ? " *" : "") : "—"}</td>`; }).join("")}</tr>`;
+  wrap.innerHTML = h + "</tbody></table>";
+}
+
+document.getElementById("toggleTable").onclick = () => { state.table = !state.table; render(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { buildControls(); render(); });
+load().catch(e => { document.getElementById("chart").innerHTML = `<div class="status">加载失败：${e}</div>`; });
+</script>
+</body>
+</html>

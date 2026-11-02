@@ -4,6 +4,8 @@ Hourly cross-venue perp DEX slippage history, built on [yodablocks/perp-liquidit
 
 **What runs:** `.github/workflows/snapshot.yml` runs every hour at :17 UTC, snapshots BTC / ETH / SOL / HYPE order books on Hyperliquid, Lighter, Aster, edgeX, Paradex, Extended and GRVT, and commits the results to `data/`.
 
+**Chart:** https://ut-silver.github.io/perp-liquidity-tracker/ (static `index.html` reading `data/` on load, so it is always current; no build step).
+
 **Output:**
 - `data/latest.md`: latest table of total cost (slippage + base-tier taker fee, bps), averaged over buy and sell
 - `data/YYYY-MM/slippage.csv`: one row per run × venue × token × side × clip size ($10k / $100k / $500k / $1M)
