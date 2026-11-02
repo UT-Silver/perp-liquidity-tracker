@@ -231,7 +231,7 @@ const I18N = {
     s_avg: "买卖平均", s_buy: "买入", s_sell: "卖出", r_all: "全部",
     sc_lin: "线性", sc_log: "对数", sh_own: "各图独立", sh_token: "同币种统一",
     fee_base: "基础档", fee_vip: "最高档",
-    lowest: "最新最低", deepest: "最新最深",
+    lowest: r => `${r}中位数最低`, deepest: r => `${r}中位数最深`, rangeTxt: {"24h":"24 小时", "7d":"7 天", "30d":"30 天", "all":"全部时段"},
     latest: "最新", snaps: "快照", snapsUnit: "次",
     loading: "加载数据中…", noData: "还没有数据", noFilter: "当前筛选没有数据",
     depthSoon: "盘口深度（±bps 口径）从 2026-11-02 起开始记录，下一次快照后就会有数据",
@@ -256,7 +256,7 @@ const I18N = {
     s_avg: "Buy/sell avg", s_buy: "Buy", s_sell: "Sell", r_all: "All",
     sc_lin: "Linear", sc_log: "Log", sh_own: "Per chart", sh_token: "Per token",
     fee_base: "Base", fee_vip: "Top tier",
-    lowest: "Lowest now", deepest: "Deepest now",
+    lowest: r => `Lowest ${r} median`, deepest: r => `Deepest ${r} median`, rangeTxt: {"24h":"24h", "7d":"7d", "30d":"30d", "all":"all-time"},
     latest: "Latest", snaps: "Snapshots", snapsUnit: "",
     loading: "Loading data…", noData: "No data yet", noFilter: "No data for this selection",
     depthSoon: "Band depth is recorded from 2026-11-02; data appears after the next snapshot",
@@ -291,7 +291,7 @@ const TOKEN_ORDER = ["BTC","ETH","SOL","HYPE","XRP","DOGE","SUI","ENA","ZEC","PU
 const browserLang = (navigator.language || "zh").toLowerCase().startsWith("zh") ? "zh" : "en";
 const state = {
   lang: store.get("pdt.lang", browserLang), theme: store.get("pdt.theme", "auto"),
-  tokens: new Set(["BTC","HYPE"]), clips: new Set([100000, 1000000]),
+  tokens: new Set(["BTC","ETH","SOL","HYPE"]), clips: new Set([10000, 100000, 500000, 1000000]),
   metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base", band: 50,
   venues: new Set(["hyperliquid","lighter","aster","edgex"]),
 };
@@ -507,13 +507,15 @@ function panel(token, clip, series, sharedValues) {
   const m = state.metric, meta = METRICS[m];
   const el = document.createElement("div"); el.className = "panel";
   const pts = Object.values(series).flat();
-  const latestT = pts.length ? Math.max(...pts.map(p => p.t)) : null;
-  const lv = Object.entries(series).map(([v, p]) => [v, p.find(q => q.t === latestT)]).filter(([,q]) => q)
+  // badge: venue with the best MEDIAN over the selected time range (robust to single-snapshot noise)
+  const median = a => { const x = [...a].sort((p,q) => p-q), n = x.length; return n % 2 ? x[(n-1)/2] : (x[n/2-1] + x[n/2]) / 2; };
+  const lv = Object.entries(series).map(([v, p]) => [v, {v: median(p.map(q => q.v)), partial: p.filter(q => q.partial).length * 2 > p.length, n: p.length}])
     .sort((a,b) => meta.lowerBetter ? a[1].v - b[1].v : b[1].v - a[1].v);
   const best = lv[0];
+  const rtxt = t("rangeTxt")[state.range];
   el.innerHTML = `<div class="p-head">
       <div class="p-title">${clip == null ? token : fmtClip(clip)}<small>${clip == null ? mLabel(m) : token}</small></div>
-      ${best ? `<div class="best">${meta.lowerBetter ? t("lowest") : t("deepest")}<br><b><span class="dot" style="background:${color(best[0])}"></span>${LABEL[best[0]]} ${fmtVal(best[1].v, m)}${best[1].partial ? "*" : ""}</b></div>` : ""}
+      ${best ? `<div class="best" title="n = ${best[1].n}">${meta.lowerBetter ? t("lowest")(rtxt) : t("deepest")(rtxt)}<br><b><span class="dot" style="background:${color(best[0])}"></span>${LABEL[best[0]]} ${fmtVal(best[1].v, m)}${best[1].partial ? "*" : ""}</b></div>` : ""}
     </div><div class="chart"></div>`;
   const chart = el.querySelector(".chart");
   if (!pts.length) { chart.innerHTML = `<div class="empty">${t("noFilter")}</div>`; return [el, null]; }
