@@ -1,0 +1,23 @@
+name: diag-hl
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for i in 1 2 3; do
+          python3 - <<'PY'
+          import json, urllib.request
+          def l2(n=None):
+              body={"type":"l2Book","coin":"BTC"}
+              if n: body["nSigFigs"]=n
+              r=urllib.request.Request("https://api.hyperliquid.xyz/info",data=json.dumps(body).encode(),headers={"Content-Type":"application/json"})
+              return json.load(urllib.request.urlopen(r))["levels"]
+          b,a=l2()
+          print("full: nbids",len(b),"nasks",len(a))
+          print(" asks:",[(x["px"],x["sz"],x["n"]) for x in a[:8]])
+          print(" bids:",[(x["px"],x["sz"],x["n"]) for x in b[:8]])
+          print(" ask px range",a[0]["px"],"->",a[-1]["px"]," bid px range",b[0]["px"],"->",b[-1]["px"])
+          b4,a4=l2(4); print("nsig4 asks:",[(x["px"],x["sz"]) for x in a4[:4]]," bids:",[(x["px"],x["sz"]) for x in b4[:4]])
+          PY
+          sleep 20; done
