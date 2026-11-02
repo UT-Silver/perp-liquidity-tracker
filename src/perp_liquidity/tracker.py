@@ -21,6 +21,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from perp_liquidity.analyzers.depth import DEFAULT_BANDS_BPS, compute_depth
 from perp_liquidity.cli import run_analysis
 
 # Paths are relative to the working directory (the repo root in CI), not the
@@ -38,6 +39,7 @@ ERROR_COLS = ["run_ts", "venue", "token", "kind", "message"]
 # Per-token slippage files (data/YYYY-MM/slippage/{TOKEN}.csv) keep each file
 # small enough for the dashboard to load only the tokens being viewed.
 # Fees are not stored: the dashboard prices history from config/fees.json.
+DEPTH_COLS = ["run_ts", "venue", "side", "mid_price", "reach_bps"] + [f"depth_{b}bps_usd" for b in DEFAULT_BANDS_BPS]
 TOKEN_SLIP_COLS = ["run_ts", "venue", "side", "clip_usd", "mid_price", "spread_bps",
                    "slippage_bps", "partial", "filled_usd", "book_depth_usd"]
 
@@ -96,8 +98,15 @@ def main() -> int:
     reports = asyncio.run(snapshot(tokens, clips))
 
     slip_rows, fund_rows, oi_rows, err_rows = [], [], [], []
+    depth_rows: dict[str, list[dict]] = {}
     for rep in reports:
         books = {ob.venue: ob for ob in rep.orderbooks}
+        for ob in rep.orderbooks:
+            for d in compute_depth(ob):
+                row = {"run_ts": ts, "venue": d.venue, "side": d.side,
+                       "mid_price": d.mid_price, "reach_bps": round(d.reach_bps, 2)}
+                row.update({f"depth_{b}bps_usd": round(v, 0) for b, v in d.depth_usd.items()})
+                depth_rows.setdefault(rep.token, []).append(row)
         for s in rep.slippage:
             taker = fees.get(s.venue)
             ob = books.get(s.venue)
@@ -130,6 +139,8 @@ def main() -> int:
     for tok in tokens:
         _append(month_dir / "slippage" / f"{tok}.csv", TOKEN_SLIP_COLS,
                 [{k: r[k] for k in TOKEN_SLIP_COLS} for r in slip_rows if r["token"] == tok])
+    for tok, rows in depth_rows.items():
+        _append(month_dir / "depth" / f"{tok}.csv", DEPTH_COLS, rows)
     _append(month_dir / "funding.csv", FUNDING_COLS, fund_rows)
     _append(month_dir / "open_interest.csv", OI_COLS, oi_rows)
     _append(month_dir / "errors.csv", ERROR_COLS, err_rows)
@@ -148,7 +159,7 @@ def main() -> int:
 
 def write_manifest(data_dir: Path, updated: str) -> None:
     """{"months": [...], "tokens": {"2026-11": ["BTC", ...]}, "updated": ts}"""
-    months, tokens = [], {}
+    months, tokens, depth = [], {}, {}
     for p in sorted(data_dir.iterdir()):
         sd = p / "slippage"
         if p.is_dir() and sd.is_dir():
@@ -156,8 +167,11 @@ def write_manifest(data_dir: Path, updated: str) -> None:
             if toks:
                 months.append(p.name)
                 tokens[p.name] = toks
+                dd = p / "depth"
+                if dd.is_dir():
+                    depth[p.name] = sorted(f.stem for f in dd.glob("*.csv"))
     (data_dir / "manifest.json").write_text(
-        json.dumps({"months": months, "tokens": tokens, "updated": updated}) + "\n")
+        json.dumps({"months": months, "tokens": tokens, "depth": depth, "updated": updated}) + "\n")
 
 
 def write_latest(path: Path, ts: str, tokens, clips, slip_rows, err_rows) -> None:

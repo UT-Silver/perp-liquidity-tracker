@@ -119,6 +119,7 @@ footer a { color: var(--accent); text-decoration: none; }
       <div class="ctl"><label>币种（可多选）</label><div class="chips" id="tokens"></div></div>
       <div class="ctl" id="clipCtl"><label>单量（可多选）</label><div class="chips" id="clips"></div></div>
       <div class="ctl"><label>指标</label><div class="seg" id="metric"></div></div>
+      <div class="ctl" id="bandCtl"><label>深度范围</label><div class="seg" id="band"></div></div>
       <div class="ctl" id="feeCtl"><label>费率口径</label><div class="seg" id="fee"></div></div>
       <div class="ctl"><label>方向</label><div class="seg" id="side"></div></div>
       <div class="ctl"><label>时间</label><div class="seg" id="range"></div></div>
@@ -140,7 +141,7 @@ footer a { color: var(--accent); text-decoration: none; }
     空心点 = 那次抓到的盘口不够成交整笔单，数值偏乐观。总成本 = 滑点 + taker 费，费率来自 <a href="https://github.com/UT-Silver/perp-liquidity-tracker/blob/main/config/fees.json">config/fees.json</a>，对全部历史统一计算。<br>
     <b>基础档</b>：Hyperliquid 4.5 · edgeX 4.5 · Aster 4.0 · Lighter 2.8（Premium 账户；Standard 账户 0 费率但有 200–300ms 下单延迟，快照反映不出其成本）。<br>
     <b>最高档</b>：各家公布的最低 taker（最高成交量档 + 最大代币质押/持仓折扣），属做市商量级，是费率下限而非典型交易者费率：Hyperliquid 1.44 · Lighter 1.96 · Aster 1.6 · edgeX 2.4（Aster、edgeX 最高档未经官方核实）。<br>
-    盘口深度各家抓取范围不同，仅适合看同一家随时间的变化。<br>
+    盘口深度 = mid 上下 ±10 bps / ±50 bps / ±1% 以内的挂单金额，各家同口径可横向比较；空心点表示那次抓到的盘口没覆盖到该范围，数值是下限。<br>
     数据：<a href="https://github.com/UT-Silver/perp-liquidity-tracker/tree/main/data">github.com/UT-Silver/perp-liquidity-tracker/data</a>
   </footer>
 </div>
@@ -155,23 +156,25 @@ const METRICS = {
   total_cost_bps: {label:"总成本", desc:"滑点 + taker 费，bps", sizeFree:false, lowerBetter:true},
   slippage_bps:   {label:"仅滑点", desc:"不含手续费，bps", sizeFree:false, lowerBetter:true},
   spread_bps:     {label:"买卖价差", desc:"bps，与单量无关", sizeFree:true, lowerBetter:true},
-  book_depth_usd: {label:"盘口深度", desc:"单边挂单总额，与单量无关", sizeFree:true, lowerBetter:false},
+  depth:          {label:"盘口深度", desc:"mid 上下该范围内的挂单金额（买入看卖盘、卖出看买盘），与单量无关", sizeFree:true, lowerBetter:false},
 };
 const RANGES = {"24h":24, "7d":168, "30d":720, "all":Infinity};
 const state = {
   tokens: new Set(["BTC","HYPE"]), clips: new Set([100000, 1000000]),
-  metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base",
+  metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base", band: 50,
   venues: new Set(["hyperliquid","lighter","aster","edgex"]),
 };
 let ROWS = [], ALL_TOKENS = [], ALL_CLIPS = [], HOVER_T = null, FEES = {}, MANIFEST = null;
 const LOADED = new Map();   // token -> rows (lazy, per-token files)
+const DLOADED = new Map();  // token -> band-depth rows
+let DROWS = [];
 const TOKEN_ORDER = ["BTC","ETH","SOL","HYPE","XRP","DOGE","SUI","ENA","ZEC","PUMP"];
 const PANELS = [];   // {el, svg, X, tip, data, render hover}
 
 const css = n => getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(n).trim();
 const color = v => css(`--s${SLOT[v]}`);
 const fmtClip = c => c >= 1e6 ? `$${c/1e6}M` : `$${c/1e3}k`;
-const fmtVal = (v, m) => v == null || isNaN(v) ? "—" : m === "book_depth_usd"
+const fmtVal = (v, m) => v == null || isNaN(v) ? "—" : m === "depth"
   ? (v >= 1e6 ? `$${(v/1e6).toFixed(v >= 1e8 ? 0 : 1)}M` : `$${(v/1e3).toFixed(0)}k`)
   : Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
 const fmtTime = d => d.toLocaleString("zh-CN", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit", hour12:false});
@@ -212,13 +215,29 @@ async function ensureLoaded() {
       book_depth_usd: +r.book_depth_usd, partial: r.partial === "True",
     })));
   }));
+  const dneed = [...state.tokens].filter(t => !DLOADED.has(t));
+  await Promise.all(dneed.map(async tok => {
+    const months = (MANIFEST.months || []).filter(m => ((MANIFEST.depth || {})[m] || []).includes(tok));
+    const texts = await Promise.all(months.map(m => fetch(`data/${m}/depth/${tok}.csv`, {cache:"no-store"}).then(r => r.ok ? r.text() : "")));
+    DLOADED.set(tok, texts.filter(Boolean).flatMap(parseCSV).map(r => ({
+      t: +new Date(r.run_ts), venue: r.venue, token: tok,
+      side: r.side === "ask" ? "buy" : "sell",   // a buyer consumes asks, a seller consumes bids
+      reach: +r.reach_bps, d: {10: +r.depth_10bps_usd, 50: +r.depth_50bps_usd, 100: +r.depth_100bps_usd},
+    })));
+  }));
+  DROWS = [...DLOADED.values()].flat();
   ROWS = [...LOADED.values()].flat();
   ALL_CLIPS = [...new Set(ROWS.map(r => r.clip))].sort((a,b) => a-b);
 }
 
 // total cost = slippage + taker fee for the chosen tier, from config/fees.json
 const metricVal = (r, m) => m === "total_cost_bps"
-  ? (FEES[r.venue] ? r.slippage_bps + FEES[r.venue][state.fee] : null) : r[m];
+  ? (FEES[r.venue] ? r.slippage_bps + FEES[r.venue][state.fee] : null)
+  : m === "depth" ? r.d[state.band] : r[m];
+const srcRows = () => state.metric === "depth" ? DROWS : ROWS;
+// depth: a band wider than the fetched book is only a lower bound -> shown hollow like partial fills
+const partialOf = r => state.metric === "depth" ? r.reach < state.band : r.partial;
+const BAND_TXT = {10: "±10 bps", 50: "±50 bps", 100: "±1%"};
 
 function renderStatus() {
   const runs = new Set(ROWS.map(r => r.t));
@@ -260,6 +279,8 @@ function buildControls() {
   seg("metric", Object.entries(METRICS).map(([k,v]) => [k, v.label]), "metric");
   seg("side", [["avg","买卖平均"],["buy","买"],["sell","卖"]], "side");
   seg("fee", [["base","基础档"],["vip","最高档"]], "fee");
+  seg("band", [[10,"±10 bps"],[50,"±50 bps"],[100,"±1%"]], "band");
+  document.getElementById("bandCtl").style.display = state.metric === "depth" ? "" : "none";
   document.getElementById("feeCtl").style.display = state.metric === "total_cost_bps" ? "" : "none";
   seg("range", Object.keys(RANGES).map(k => [k, k === "all" ? "全部" : k]), "range");
   seg("scale", [["lin","线性"],["log","对数"]], "scale");
@@ -270,20 +291,20 @@ function buildControls() {
 
 // ----- data -----
 function seriesFor(token, clip) {
-  const m = state.metric, latest = Math.max(...ROWS.map(r => r.t));
+  const m = state.metric, SRC = srcRows(), latest = Math.max(...SRC.map(r => r.t));
   const cutoff = latest - RANGES[state.range] * 3600e3;
   const out = {};
   for (const v of VENUES) {
     if (!state.venues.has(v)) continue;
     const byT = new Map();
-    for (const r of ROWS) {
+    for (const r of SRC) {
       if (r.venue !== v || r.token !== token || r.t < cutoff) continue;
       if (clip != null && r.clip !== clip) continue;
       if (state.side !== "avg" && r.side !== state.side) continue;
       const e = byT.get(r.t) || {sum:0, n:0, partial:false};
       const x = metricVal(r, m);
       if (x != null && !isNaN(x)) { e.sum += x; e.n++; }
-      e.partial ||= r.partial; byT.set(r.t, e);
+      e.partial ||= partialOf(r); byT.set(r.t, e);
     }
     const pts = [...byT].filter(([,e]) => e.n).map(([t,e]) => ({t, v: e.sum/e.n, partial: e.partial})).sort((a,b) => a.t-b.t);
     if (pts.length) out[v] = pts;
@@ -320,12 +341,13 @@ function render() {
   const tokens = ALL_TOKENS.filter(t => state.tokens.has(t));
   const clips = meta.sizeFree ? [null] : ALL_CLIPS.filter(c => state.clips.has(c));
   const sideTxt = {avg:"买卖平均", buy:"买入", sell:"卖出"}[state.side];
-  const feeTxt = state.metric === "total_cost_bps" ? (state.fee === "vip" ? "，最高档费率" : "，基础档费率") : "";
+  const feeTxt = state.metric === "total_cost_bps" ? (state.fee === "vip" ? "，最高档费率" : "，基础档费率")
+    : state.metric === "depth" ? `，mid ${BAND_TXT[state.band]}` : "";
   document.getElementById("hint").textContent =
     `${meta.label}（${meta.desc}，${sideTxt}${feeTxt}）· ${tokens.length} 个币种 × ${clips.length} 个单量 · 鼠标悬停任一图可同步查看所有图的同一时点`;
 
   const root = document.getElementById("panels"); root.innerHTML = ""; PANELS.length = 0;
-  if (!ROWS.length) { root.innerHTML = `<div class="empty">还没有数据</div>`; return; }
+  if (!srcRows().length) { root.innerHTML = `<div class="empty">${state.metric === "depth" ? "盘口深度（±bps 口径）从 2026-11-02 起开始记录，下一次快照后就会有数据" : "还没有数据"}</div>`; renderTable([], []); return; }
 
   for (const token of tokens) {
     const data = clips.map(c => ({clip: c, series: seriesFor(token, c)}));
@@ -428,14 +450,16 @@ function syncHover(t, active) {
 
 function renderTable(tokens, clips) {
   const m = state.metric, meta = METRICS[m];
-  const latest = Math.max(...ROWS.map(r => r.t));
+  const SRC = srcRows();
+  if (!SRC.length) { document.getElementById("tableSub").textContent = ""; document.getElementById("tablewrap").innerHTML = ""; return; }
+  const latest = Math.max(...SRC.map(r => r.t));
   document.getElementById("tableSub").textContent = `${fmtTime(new Date(latest))} · ${meta.label} · 每列最优加粗`;
-  const venues = VENUES.filter(v => state.venues.has(v) && ROWS.some(r => r.venue === v));
+  const venues = VENUES.filter(v => state.venues.has(v) && SRC.some(r => r.venue === v));
   const cols = tokens.flatMap(t => clips.map(c => [t, c]));
   const val = (v, t, c) => {
-    const rs = ROWS.filter(r => r.t === latest && r.venue === v && r.token === t && (c == null || r.clip === c)
+    const rs = SRC.filter(r => r.t === latest && r.venue === v && r.token === t && (c == null || r.clip === c)
       && (state.side === "avg" || r.side === state.side) && metricVal(r, m) != null && !isNaN(metricVal(r, m)));
-    return rs.length ? {v: rs.reduce((a,r) => a + metricVal(r, m), 0) / rs.length, partial: rs.some(r => r.partial)} : null;
+    return rs.length ? {v: rs.reduce((a,r) => a + metricVal(r, m), 0) / rs.length, partial: rs.some(partialOf)} : null;
   };
   const grid = venues.map(v => cols.map(([t,c]) => val(v, t, c)));
   const bestIdx = cols.map((_, j) => {

@@ -120,3 +120,40 @@ def test_tracker_skips_when_recent(tmp_path, monkeypatch):
     called = []
     monkeypatch.setattr(tracker, "snapshot", lambda *a: called.append(1))
     assert tracker.main() == 0 and not called
+
+
+def test_band_depth_and_reach():
+    from perp_liquidity.analyzers.depth import compute_depth
+    mid = 100.0
+    ob = OrderBook(venue="x", token="T",
+                   bids=[OrderBookLevel(99.95, 10), OrderBookLevel(99.6, 10), OrderBookLevel(99.2, 10)],
+                   asks=[OrderBookLevel(100.05, 10), OrderBookLevel(100.3, 10)])
+    res = {d.side: d for d in compute_depth(ob, (10, 50, 100))}
+    # bid levels at 5, 40, 80 bps from mid
+    assert res["bid"].depth_usd[10] == pytest.approx(999.5)
+    assert res["bid"].depth_usd[50] == pytest.approx(999.5 + 996)
+    assert res["bid"].depth_usd[100] == pytest.approx(999.5 + 996 + 992)
+    assert not res["bid"].truncated(50) and res["bid"].truncated(100)  # reach 80 bps
+    # ask book only reaches 30 bps: 50/100 bps bands are lower bounds
+    assert res["ask"].truncated(50) and res["ask"].depth_usd[100] == res["ask"].depth_usd[50]
+
+
+def test_tracker_writes_depth(tmp_path, monkeypatch):
+    real_init = httpx.AsyncClient.__init__
+
+    def patched(self, *a, **kw):
+        kw["transport"] = httpx.MockTransport(_hl_handler)
+        real_init(self, *a, **kw)
+
+    monkeypatch.setattr(httpx.AsyncClient, "__init__", patched)
+    monkeypatch.setattr("perp_liquidity.cli._default_fetchers", lambda: [HyperliquidClient])
+    monkeypatch.setenv("TRACK_TOKENS", "BTC")
+    monkeypatch.setenv("TRACK_CLIPS", "100000")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("FEES_PATH", str(tracker.Path(__file__).parents[1] / "config" / "fees.json"))
+    assert tracker.main() == 0
+    month = next(p for p in tmp_path.iterdir() if p.is_dir())
+    rows = list(csv.DictReader((month / "depth" / "BTC.csv").open()))
+    assert {r["side"] for r in rows} == {"bid", "ask"}
+    assert float(rows[0]["depth_10bps_usd"]) > 0 and float(rows[0]["reach_bps"]) > 0
+    assert json.loads((tmp_path / "manifest.json").read_text())["depth"][month.name] == ["BTC"]
