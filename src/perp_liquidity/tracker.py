@@ -71,6 +71,20 @@ def main() -> int:
     fees = load_fees()
 
     run_ts = datetime.now(timezone.utc).replace(microsecond=0)
+
+    # GitHub cron is lossy, so the workflow fires every 15 min; only snapshot
+    # if the last one is older than MIN_GAP_MINUTES (manual runs set FORCE=1).
+    min_gap = float(os.getenv("MIN_GAP_MINUTES", "0"))
+    manifest_path = data_dir / "manifest.json"
+    if min_gap > 0 and os.getenv("FORCE") != "1" and manifest_path.exists():
+        try:
+            last = datetime.fromisoformat(json.loads(manifest_path.read_text()).get("updated", ""))
+            age_min = (run_ts - last).total_seconds() / 60
+            if age_min < min_gap:
+                print(f"skip: last snapshot {age_min:.0f} min ago (< {min_gap:.0f})")
+                return 0
+        except ValueError:
+            pass
     ts = run_ts.isoformat()
     month_dir = data_dir / run_ts.strftime("%Y-%m")
 

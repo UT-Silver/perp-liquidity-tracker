@@ -2,7 +2,7 @@
 
 Hourly cross-venue perp DEX slippage history, built on [yodablocks/perp-liquidity](https://github.com/yodablocks/perp-liquidity) (commit 33959f8).
 
-**What runs:** `.github/workflows/snapshot.yml` runs every hour at :17 UTC, snapshots BTC / ETH / SOL / HYPE order books on Hyperliquid, Lighter, Aster, edgeX, Paradex, Extended and GRVT, and commits the results to `data/`.
+**What runs:** `.github/workflows/snapshot.yml` fires every 15 min and snapshots when the last snapshot is ≥45 min old (GitHub cron drops runs, so this keeps the series ~hourly), snapshots BTC / ETH / SOL / HYPE order books on Hyperliquid, Lighter, Aster, edgeX, Paradex, Extended and GRVT, and commits the results to `data/`.
 
 **Chart:** https://ut-silver.github.io/perp-liquidity-tracker/ (static `index.html` reading `data/` on load, so it is always current; no build step).
 

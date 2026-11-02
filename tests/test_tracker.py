@@ -108,3 +108,15 @@ def test_tracker_writes_history(tmp_path, monkeypatch):
     assert manifest["months"] == [month.name]
     latest = (tmp_path / "latest.md").read_text()
     assert "hyperliquid" in latest and "$100,000" in latest
+
+
+def test_tracker_skips_when_recent(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("MIN_GAP_MINUTES", "45")
+    monkeypatch.delenv("FORCE", raising=False)
+    from datetime import datetime, timezone
+    (tmp_path / "manifest.json").write_text(json.dumps(
+        {"months": [], "updated": datetime.now(timezone.utc).isoformat()}))
+    called = []
+    monkeypatch.setattr(tracker, "snapshot", lambda *a: called.append(1))
+    assert tracker.main() == 0 and not called

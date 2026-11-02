@@ -2,7 +2,9 @@ name: hourly-slippage-snapshot
 
 on:
   schedule:
-    - cron: "17 * * * *"   # every hour at :17 UTC (off the top of the hour to avoid queue delays)
+    # GitHub drops/delays scheduled runs, so fire every 15 min; the tracker
+    # only snapshots when the last snapshot is >= 45 min old (~hourly series).
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch: {}
 
 permissions:
@@ -31,6 +33,8 @@ jobs:
         env:
           TRACK_TOKENS: BTC,ETH,SOL,HYPE
           TRACK_CLIPS: 10000,100000,500000,1000000
+          MIN_GAP_MINUTES: "45"
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
         run: python -m perp_liquidity.tracker
 
       - name: Commit data
