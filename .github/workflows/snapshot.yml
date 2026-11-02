@@ -5,7 +5,12 @@ on:
     # GitHub drops/delays scheduled runs, so fire every 15 min; the tracker
     # only snapshots when the last snapshot is >= 45 min old (~hourly series).
     - cron: "7,22,37,52 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Snapshot even if the last one is < 45 min old"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -34,7 +39,7 @@ jobs:
           TRACK_TOKENS: BTC,ETH,SOL,HYPE
           TRACK_CLIPS: 10000,100000,500000,1000000
           MIN_GAP_MINUTES: "45"
-          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          FORCE: ${{ inputs.force && '1' || '0' }}
         run: python -m perp_liquidity.tracker
 
       - name: Commit data
