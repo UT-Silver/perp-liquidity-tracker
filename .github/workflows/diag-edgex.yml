@@ -5,11 +5,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for u in \
-            "https://pro.edgex.exchange/api/v1/public/meta/getMetaData" \
-            "https://pro.edgex.exchange/api/v1/public/quote/getDepth?contractId=10000001&level=200" ; do
-            echo "== $u"
-            curl -sS -L -o body -w "status=%{http_code} type=%{content_type} final=%{url_effective}\n" -A "Mozilla/5.0" "$u" || true
-            head -c 400 body; echo; echo
+          for host in pro.edgex.exchange api.edgex.exchange edgex.exchange; do
+            for p in "api/v2/public/meta/getMetaData" "api/v2/public/quote/getDepth?contractId=10000001&level=200" "api/v2/public/quote/getTicker?contractId=10000001" "api/v2/public/funding/getLatestFundingRate?contractId=10000001"; do
+              u="https://$host/$p"
+              code=$(curl -sS -m 15 -o body -w "%{http_code} %{content_type}" "$u" 2>&1 || true)
+              echo "== $u -> $code"
+              head -c 600 body | tr -d '\n'; echo
+            done
           done
-          curl -sS https://ipinfo.io/json | head -c 300
