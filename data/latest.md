@@ -1,4 +1,4 @@
-# Perp slippage snapshot — 2026-11-02T03:52:43+00:00
+# Perp slippage snapshot — 2026-11-02T03:58:07+00:00
 
 Total cost = slippage vs mid + base-tier taker fee, in bps, averaged over buy & sell. `*` = book snapshot too shallow to fill the clip.
 
@@ -6,48 +6,47 @@ Total cost = slippage vs mid + base-tier taker fee, in bps, averaged over buy & 
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 |
 |---|---|---|---|---|---|
-| aster | 0.01 | 4.16 | 4.59 | 4.85 | 5.25 |
-| extended | 0.13 | 2.56 | 2.64 | 2.93 | 3.34 |
-| grvt | 0.01 | 4.51 | 4.52 | 5.06 | 5.20* |
-| hyperliquid | 0.13 | 4.56 | 4.75 | 5.39 | 5.81 |
-| lighter | 0.04 | 0.02 | 0.17 | 0.50 | 0.80 |
-| paradex | 1.77 | 0.88 | 0.88 | 35.14 | 257.73* |
+| aster | 0.01 | 4.01 | 4.01 | 4.15 | 4.55 |
+| edgex | 0.13 | 4.56 | 4.56 | 4.59 | 4.73 |
+| extended | 0.13 | 2.75 | 2.75 | 3.13 | 3.51 |
+| grvt | 0.01 | 4.51 | 4.51 | 4.65 | 4.98* |
+| hyperliquid | 0.13 | 4.56 | 4.66 | 4.86 | 5.01 |
+| lighter | 0.20 | 0.18 | 0.30 | 0.57 | 0.72 |
+| paradex | 0.22 | 0.77 | 0.78 | 35.99 | 258.87* |
 
 ## ETH
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 |
 |---|---|---|---|---|---|
-| aster | 0.04 | 4.63 | 4.68 | 4.85 | 5.24 |
-| extended | 0.43 | 2.72 | 2.72 | 3.70 | 4.56 |
-| grvt | 0.04 | 4.52 | 4.82 | 5.57 | 5.60* |
-| hyperliquid | 0.43 | 5.02 | 5.42 | 5.71 | 5.95 |
-| lighter | 0.56 | 0.29 | 0.68 | 1.56 | 2.43 |
-| paradex | 1.69 | 0.87 | 0.87 | 81.56 | 115.45* |
+| aster | 0.04 | 4.04 | 4.26 | 4.55 | 4.85 |
+| edgex | 0.35 | 5.22 | 5.25 | 5.26 | 5.34 |
+| extended | 0.43 | 3.14 | 3.53 | 4.20 | 5.09 |
+| grvt | 0.04 | 4.52 | 4.98 | 5.36* | 5.65* |
+| hyperliquid | 0.43 | 4.72 | 4.72 | 4.98 | 5.50 |
+| lighter | 0.48 | 0.25 | 0.48 | 1.17 | 1.74 |
+| paradex | 1.95 | 1.02 | 1.02 | 80.84 | 115.19* |
 
 ## SOL
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 |
 |---|---|---|---|---|---|
-| aster | 1.05 | 4.57 | 5.00 | 6.35 | 7.88 |
-| extended | 1.05 | 3.02 | 3.51 | 5.15 | 7.01 |
-| grvt | 1.05 | 5.28 | 6.54 | 8.60 | 10.51* |
-| hyperliquid | 1.26 | 5.17 | 5.66 | 7.42 | 8.66 |
-| lighter | 0.63 | 0.44 | 1.73 | 3.96 | 5.64 |
-| paradex | 2.93 | 1.47 | 19.61 | 390.74* | 390.74* |
+| aster | 1.05 | 4.52 | 5.36 | 6.63 | 8.07 |
+| edgex | 4.19 | 6.59 | 6.59 | 6.59 | 6.73 |
+| extended | 1.05 | 4.07 | 4.69 | 5.66 | 7.23 |
+| grvt | 1.05 | 5.25 | 5.73 | 7.49 | 9.25* |
+| hyperliquid | 0.10 | 4.55 | 4.55 | 4.64 | 6.21 |
+| lighter | 0.94 | 0.52 | 1.33 | 3.09 | 4.67 |
+| paradex | 2.82 | 1.41 | 19.58 | 390.32* | 390.32* |
 
 ## HYPE
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 |
 |---|---|---|---|---|---|
-| aster | 1.25 | 4.94 | 5.39 | 8.86 | 13.79 |
-| extended | 0.11 | 2.74 | 4.22 | 10.93 | 20.01 |
-| grvt | 0.57 | 4.78 | 5.57 | 6.10* | 6.10* |
-| hyperliquid | 0.34 | 6.41 | 7.95 | 10.66 | 13.16 |
-| lighter | 1.52 | 2.21 | 3.37 | 6.34 | 8.94 |
-| paradex | 2.95 | 1.47 | 19.38 | 161.56* | 161.56* |
+| aster | 0.56 | 4.43 | 5.22 | 8.86 | 13.96 |
+| edgex | 1.81 | 5.40 | 5.61 | 45.08 | 140.34 |
+| extended | 0.11 | 4.03 | 4.80 | 11.00 | 19.65 |
+| grvt | 0.56 | 4.84 | 5.32 | 5.40* | 5.40* |
+| hyperliquid | 0.11 | 5.25 | 6.83 | 8.41 | 11.19 |
+| lighter | 1.83 | 1.09 | 2.98 | 5.74 | 7.97 |
+| paradex | 5.19 | 2.60 | 20.62 | 164.87* | 164.87* |
 
-## Errors
-- edgex / BTC: JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-- edgex / ETH: JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-- edgex / SOL: JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-- edgex / HYPE: JSONDecodeError: Expecting value: line 1 column 1 (char 0)
