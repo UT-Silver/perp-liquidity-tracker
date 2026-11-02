@@ -1,0 +1,15 @@
+name: diag-edgex
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in \
+            "https://pro.edgex.exchange/api/v1/public/meta/getMetaData" \
+            "https://pro.edgex.exchange/api/v1/public/quote/getDepth?contractId=10000001&level=200" ; do
+            echo "== $u"
+            curl -sS -L -o body -w "status=%{http_code} type=%{content_type} final=%{url_effective}\n" -A "Mozilla/5.0" "$u" || true
+            head -c 400 body; echo; echo
+          done
+          curl -sS https://ipinfo.io/json | head -c 300
