@@ -21,6 +21,8 @@ def _lv(px, sz):
 
 def _hl_handler(request: httpx.Request) -> httpx.Response:
     body = json.loads(request.content)
+    if body["type"] == "candleSnapshot":
+        return httpx.Response(200, json=[{"t": i * 60000, "c": str(100000 + (i % 3))} for i in range(61)])
     if body["type"] == "metaAndAssetCtxs":
         return httpx.Response(200, json=[
             {"universe": [{"name": "BTC"}]},
@@ -106,6 +108,9 @@ def test_tracker_writes_history(tmp_path, monkeypatch):
     manifest = json.loads((tmp_path / "manifest.json").read_text())
     assert manifest["months"] == [month.name]
     assert manifest["tokens"][month.name] == ["BTC"]
+    assert manifest["vol"][month.name] == ["BTC"]
+    vrows = list(csv.DictReader((month / "vol" / "BTC.csv").open()))
+    assert len(vrows) == 2 and float(vrows[0]["rv_1h_bps"]) > 0
     latest = (tmp_path / "latest.md").read_text()
     assert "hyperliquid" in latest and "$100,000" in latest
 
@@ -157,3 +162,26 @@ def test_tracker_writes_depth(tmp_path, monkeypatch):
     assert {r["side"] for r in rows} == {"bid", "ask"}
     assert float(rows[0]["depth_10bps_usd"]) > 0 and float(rows[0]["reach_bps"]) > 0
     assert json.loads((tmp_path / "manifest.json").read_text())["depth"][month.name] == ["BTC"]
+
+
+def test_realized_vol_math():
+    import math
+    from perp_liquidity.analyzers.volatility import realized_vol
+    closes = [100 * math.exp(0.001 * (i % 2)) for i in range(61)]   # +/-10 bps alternating
+    rv = realized_vol("BTC", closes)
+    assert rv.n_returns == 60
+    assert rv.rv_1h_bps == pytest.approx(math.sqrt(60) * 10, rel=1e-3)
+    assert rv.rv_ann_pct == pytest.approx(0.001 * math.sqrt(60 * 24 * 365) * 100, rel=1e-3)
+    assert realized_vol("BTC", [1.0] * 5) is None
+
+
+def test_effective_gap_shortens_in_high_vol(tmp_path, monkeypatch):
+    vd = tmp_path / "2026-11" / "vol"; vd.mkdir(parents=True)
+    with (vd / "BTC.csv").open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=tracker.VOL_COLS); w.writeheader()
+        for i in range(30):
+            w.writerow({"run_ts": f"t{i}", "n_returns": 60, "rv_1h_bps": 40, "rv_ann_pct": 30, "ret_1h_bps": 0})
+    assert tracker.effective_gap(45, tmp_path, 50)[0] == 45      # 1.25x median: normal
+    gap, why = tracker.effective_gap(45, tmp_path, 80)            # 2x median: fast
+    assert gap == 10 and why.startswith("high-vol")
+    assert tracker.effective_gap(45, tmp_path / "none", 999)[0] == 45   # no history: normal

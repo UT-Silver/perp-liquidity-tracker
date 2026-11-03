@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from perp_liquidity.analyzers.depth import DEFAULT_BANDS_BPS, compute_depth
+from perp_liquidity.analyzers.volatility import fetch_vols
 from perp_liquidity.cli import run_analysis
 
 # Paths are relative to the working directory (the repo root in CI), not the
@@ -40,6 +41,7 @@ ERROR_COLS = ["run_ts", "venue", "token", "kind", "message"]
 # small enough for the dashboard to load only the tokens being viewed.
 # Fees are not stored: the dashboard prices history from config/fees.json.
 DEPTH_COLS = ["run_ts", "venue", "side", "mid_price", "reach_bps"] + [f"depth_{b}bps_usd" for b in DEFAULT_BANDS_BPS]
+VOL_COLS = ["run_ts", "n_returns", "rv_1h_bps", "rv_ann_pct", "ret_1h_bps"]
 TOKEN_SLIP_COLS = ["run_ts", "venue", "side", "clip_usd", "mid_price", "spread_bps",
                    "slippage_bps", "partial", "filled_usd", "book_depth_usd"]
 
@@ -71,6 +73,27 @@ async def snapshot(tokens: list[str], clips: list[float]):
     return reports
 
 
+def trailing_rv(data_dir: Path, token: str = "BTC", n: int = 168) -> list[float]:
+    """Last n recorded 1h RVs (bps) for token, across monthly files."""
+    vals: list[float] = []
+    for f in sorted(data_dir.glob(f"*/vol/{token}.csv")):
+        with f.open() as fh:
+            vals += [float(r["rv_1h_bps"]) for r in csv.DictReader(fh) if r.get("rv_1h_bps")]
+    return vals[-n:]
+
+
+def effective_gap(min_gap: float, data_dir: Path, now_rv_bps: float | None) -> tuple[float, str]:
+    """Sample faster when BTC's last-hour realized vol is > 1.5x its trailing median."""
+    fast = float(os.getenv("FAST_GAP_MINUTES", "10"))
+    hist = trailing_rv(data_dir)
+    if now_rv_bps is None or len(hist) < 12:
+        return min_gap, "normal"
+    med = sorted(hist)[len(hist) // 2]
+    if med > 0 and now_rv_bps > 1.5 * med:
+        return min(min_gap, fast), f"high-vol (BTC 1h RV {now_rv_bps:.0f} bps vs median {med:.0f})"
+    return min_gap, "normal"
+
+
 def main() -> int:
     tokens = [t.strip().upper() for t in os.getenv("TRACK_TOKENS", "BTC,ETH,SOL,HYPE,DOGE,XRP,PUMP,SUI,ENA,ZEC").split(",") if t.strip()]
     clips = [float(c) for c in os.getenv("TRACK_CLIPS", "10000,100000,500000,1000000").split(",")]
@@ -83,19 +106,27 @@ def main() -> int:
     # if the last one is older than MIN_GAP_MINUTES (manual runs set FORCE=1).
     min_gap = float(os.getenv("MIN_GAP_MINUTES", "0"))
     manifest_path = data_dir / "manifest.json"
+    vols = None
     if min_gap > 0 and os.getenv("FORCE") != "1" and manifest_path.exists():
         try:
             last = datetime.fromisoformat(json.loads(manifest_path.read_text()).get("updated", ""))
             age_min = (run_ts - last).total_seconds() / 60
             if age_min < min_gap:
-                print(f"skip: last snapshot {age_min:.0f} min ago (< {min_gap:.0f})")
-                return 0
+                vols = asyncio.run(fetch_vols(tokens))
+                btc = vols.get("BTC")
+                gap, regime = effective_gap(min_gap, data_dir, btc.rv_1h_bps if btc else None)
+                if age_min < gap:
+                    print(f"skip: last snapshot {age_min:.0f} min ago (< {gap:.0f}, {regime})")
+                    return 0
+                print(f"sampling early: {regime}")
         except ValueError:
             pass
     ts = run_ts.isoformat()
     month_dir = data_dir / run_ts.strftime("%Y-%m")
 
     reports = asyncio.run(snapshot(tokens, clips))
+    if vols is None:
+        vols = asyncio.run(fetch_vols(tokens))
 
     slip_rows, fund_rows, oi_rows, err_rows = [], [], [], []
     depth_rows: dict[str, list[dict]] = {}
@@ -139,6 +170,10 @@ def main() -> int:
     for tok in tokens:
         _append(month_dir / "slippage" / f"{tok}.csv", TOKEN_SLIP_COLS,
                 [{k: r[k] for k in TOKEN_SLIP_COLS} for r in slip_rows if r["token"] == tok])
+    for tok, v in vols.items():
+        _append(month_dir / "vol" / f"{tok}.csv", VOL_COLS, [{
+            "run_ts": ts, "n_returns": v.n_returns, "rv_1h_bps": round(v.rv_1h_bps, 2),
+            "rv_ann_pct": round(v.rv_ann_pct, 2), "ret_1h_bps": round(v.ret_1h_bps, 2)}])
     for tok, rows in depth_rows.items():
         _append(month_dir / "depth" / f"{tok}.csv", DEPTH_COLS, rows)
     _append(month_dir / "funding.csv", FUNDING_COLS, fund_rows)
@@ -159,7 +194,7 @@ def main() -> int:
 
 def write_manifest(data_dir: Path, updated: str) -> None:
     """{"months": [...], "tokens": {"2026-11": ["BTC", ...]}, "updated": ts}"""
-    months, tokens, depth = [], {}, {}
+    months, tokens, depth, vol = [], {}, {}, {}
     for p in sorted(data_dir.iterdir()):
         sd = p / "slippage"
         if p.is_dir() and sd.is_dir():
@@ -170,8 +205,11 @@ def write_manifest(data_dir: Path, updated: str) -> None:
                 dd = p / "depth"
                 if dd.is_dir():
                     depth[p.name] = sorted(f.stem for f in dd.glob("*.csv"))
+                vd = p / "vol"
+                if vd.is_dir():
+                    vol[p.name] = sorted(f.stem for f in vd.glob("*.csv"))
     (data_dir / "manifest.json").write_text(
-        json.dumps({"months": months, "tokens": tokens, "depth": depth, "updated": updated}) + "\n")
+        json.dumps({"months": months, "tokens": tokens, "depth": depth, "vol": vol, "updated": updated}) + "\n")
 
 
 def write_latest(path: Path, ts: str, tokens, clips, slip_rows, err_rows) -> None:

@@ -201,6 +201,8 @@ footer b { color: var(--text-2); font-weight: 600; }
         <div class="ctl"><label data-i18n="lblRange"></label><div class="seg" id="range"></div></div>
         <div class="ctl"><label data-i18n="lblScale"></label><div class="seg" id="scale"></div></div>
         <div class="ctl"><label data-i18n="lblShare"></label><div class="seg" id="share"></div></div>
+        <div class="ctl"><label data-i18n="lblStat"></label><div class="seg" id="stat"></div></div>
+        <div class="ctl"><label data-i18n="lblRegime"></label><div class="seg" id="regime"></div></div>
         <div class="ctl"><label data-i18n="lblVenues"></label><div class="chips" id="venues"></div></div>
       </div>
     </div>
@@ -209,7 +211,7 @@ footer b { color: var(--text-2); font-weight: 600; }
     <div id="panels"><div class="empty" data-i18n="loading"></div></div>
 
     <details class="card" id="tablecard">
-      <summary><span class="ttl" data-i18n="latestTable" style="font-weight:600;color:var(--text);font-size:15px"></span><span id="tableSub"></span></summary>
+      <summary><span class="ttl" data-i18n="statsTable" style="font-weight:600;color:var(--text);font-size:15px"></span><span id="tableSub"></span></summary>
       <div class="tablewrap" id="tablewrap"></div>
     </details>
 
@@ -231,11 +233,16 @@ const I18N = {
     s_avg: "买卖平均", s_buy: "买入", s_sell: "卖出", r_all: "全部",
     sc_lin: "线性", sc_log: "对数", sh_own: "各图独立", sh_token: "同币种统一",
     fee_base: "基础档", fee_vip: "最高档",
-    lowest: r => `${r}中位数最低`, deepest: r => `${r}中位数最深`, rangeTxt: {"24h":"24 小时", "7d":"7 天", "30d":"30 天", "all":"全部时段"},
+    rangeTxt: {"24h":"24 小时", "7d":"7 天", "30d":"30 天", "all":"全部时段"},
+    lblStat: "统计", lblRegime: "市场状态", st_med: "中位数", st_tail: "最差 10%",
+    rg_all: "全部", rg_calm: "平静", rg_high: "高波动",
+    badge: (rng, rg, st, low) => `${rng}${rg ? " · " + rg : ""} · ${st === "med" ? "中位数" : "尾部（最差 10%）"}${low ? "最低" : "最深"}`,
+    statsTable: "所选时段统计", nRuns: "快照数",
+    regimeNote: "高波动 = 该币过去 1 小时已实现波动率排在所选时段前 25% 的快照；平静 = 后 50%。图中灰色竖条为高波动时段。",
     latest: "最新", snaps: "快照", snapsUnit: "次",
     loading: "加载数据中…", noData: "还没有数据", noFilter: "当前筛选没有数据",
     depthSoon: "盘口深度（±bps 口径）从 2026-11-02 起开始记录，下一次快照后就会有数据",
-    latestTable: "最新一次快照", bestBold: "每列最优加粗", venue: "交易所",
+    bestBold: "每列最优加粗", venue: "交易所",
     summary: (m, extra, nt, nc) => `${m}${extra} · ${nt} 个币种${nc ? ` × ${nc} 个单量` : ""} · 悬停任一图可同步查看同一时点`,
     footer: `<b>总成本</b> = 滑点 + taker 费，费率取自 <a href="https://github.com/UT-Silver/perp-liquidity-tracker/blob/main/config/fees.json">config/fees.json</a>，对全部历史统一计算。
       <b>基础档</b>：Hyperliquid 4.5 · edgeX 4.5 · Aster 4.0 · Lighter 2.8 bps（Premium 账户；Standard 账户 0 费率但有 200–300ms 下单延迟，快照反映不出其成本）。
@@ -256,11 +263,16 @@ const I18N = {
     s_avg: "Buy/sell avg", s_buy: "Buy", s_sell: "Sell", r_all: "All",
     sc_lin: "Linear", sc_log: "Log", sh_own: "Per chart", sh_token: "Per token",
     fee_base: "Base", fee_vip: "Top tier",
-    lowest: r => `Lowest ${r} median`, deepest: r => `Deepest ${r} median`, rangeTxt: {"24h":"24h", "7d":"7d", "30d":"30d", "all":"all-time"},
+    rangeTxt: {"24h":"24h", "7d":"7d", "30d":"30d", "all":"all-time"},
+    lblStat: "Statistic", lblRegime: "Market regime", st_med: "Median", st_tail: "Worst 10%",
+    rg_all: "All", rg_calm: "Calm", rg_high: "High vol",
+    badge: (rng, rg, st, low) => `${rng}${rg ? " · " + rg : ""} · ${low ? "lowest" : "deepest"} ${st === "med" ? "median" : "worst-10% tail"}`,
+    statsTable: "Statistics for selection", nRuns: "Snapshots",
+    regimeNote: "High vol = snapshots whose token 1h realized vol is in the top 25% of the selected range; calm = bottom 50%. Grey bars on charts mark high-vol snapshots.",
     latest: "Latest", snaps: "Snapshots", snapsUnit: "",
     loading: "Loading data…", noData: "No data yet", noFilter: "No data for this selection",
     depthSoon: "Band depth is recorded from 2026-11-02; data appears after the next snapshot",
-    latestTable: "Latest snapshot", bestBold: "best per column in bold", venue: "Venue",
+    bestBold: "best per column in bold", venue: "Venue",
     summary: (m, extra, nt, nc) => `${m}${extra} · ${nt} token${nt > 1 ? "s" : ""}${nc ? ` × ${nc} size${nc > 1 ? "s" : ""}` : ""} · hover any chart to sync all`,
     footer: `<b>Total cost</b> = slippage + taker fee, priced for all history from <a href="https://github.com/UT-Silver/perp-liquidity-tracker/blob/main/config/fees.json">config/fees.json</a>.
       <b>Base</b>: Hyperliquid 4.5 · edgeX 4.5 · Aster 4.0 · Lighter 2.8 bps (Premium account; Standard is 0% but adds a 200–300 ms taker delay a snapshot can't price).
@@ -292,11 +304,12 @@ const browserLang = (navigator.language || "zh").toLowerCase().startsWith("zh") 
 const state = {
   lang: store.get("pdt.lang", browserLang), theme: store.get("pdt.theme", "auto"),
   tokens: new Set(["BTC","ETH","SOL","HYPE"]), clips: new Set([10000, 100000, 500000, 1000000]),
-  metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base", band: 50,
+  metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base", band: 50, stat: "med", regime: "all",
   venues: new Set(["hyperliquid","lighter","aster","edgex"]),
 };
 let ROWS = [], DROWS = [], ALL_TOKENS = [], ALL_CLIPS = [], FEES = {}, MANIFEST = null;
-const LOADED = new Map(), DLOADED = new Map(), PANELS = [];
+const LOADED = new Map(), DLOADED = new Map(), VLOADED = new Map(), PANELS = [];
+let REGIME = {};   // token -> Map(run_ts -> "calm" | "mid" | "high"), recomputed per range
 
 /* ================= helpers ================= */
 const root = document.getElementById("root");
@@ -350,12 +363,32 @@ async function ensureLoaded() {
       reach: +r.reach_bps, d: {10: +r.depth_10bps_usd, 50: +r.depth_50bps_usd, 100: +r.depth_100bps_usd},
     })));
   }));
+  await Promise.all([...state.tokens].filter(x => !VLOADED.has(x)).map(async tok => {
+    const ms = months.filter(m => ((MANIFEST.vol || {})[m] || []).includes(tok));
+    const txt = await Promise.all(ms.map(m => fetch(`data/${m}/vol/${tok}.csv`, {cache:"no-store"}).then(r => r.ok ? r.text() : "")));
+    VLOADED.set(tok, txt.filter(Boolean).flatMap(parseCSV).map(r => ({t: +new Date(r.run_ts), rv: +r.rv_1h_bps})));
+  }));
   ROWS = [...LOADED.values()].flat(); DROWS = [...DLOADED.values()].flat();
   ALL_CLIPS = [...new Set(ROWS.map(r => r.clip))].sort((a,b) => a-b);
 }
 const metricVal = (r, m) => m === "total_cost_bps" ? (FEES[r.venue] ? r.slippage_bps + FEES[r.venue][state.fee] : null)
   : m === "depth" ? r.d[state.band] : r[m];
 const srcRows = () => state.metric === "depth" ? DROWS : ROWS;
+const quantile = (a, q) => { const x = [...a].sort((p,r) => p-r); if (!x.length) return NaN;
+  const i = (x.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return x[lo] + (x[hi] - x[lo]) * (i - lo); };
+// "worst 10%": high tail for costs, low tail for depth
+const statOf = (vals, lowerBetter) => state.stat === "med" ? quantile(vals, .5) : quantile(vals, lowerBetter ? .9 : .1);
+function computeRegimes(cutoff) {
+  REGIME = {};
+  for (const [tok, rows] of VLOADED) {
+    const inR = rows.filter(r => r.t >= cutoff && r.rv > 0);
+    const m = new Map(); REGIME[tok] = m;
+    if (inR.length < 8) continue;           // too few snapshots to split into regimes
+    const q50 = quantile(inR.map(r => r.rv), .5), q75 = quantile(inR.map(r => r.rv), .75);
+    for (const r of inR) m.set(r.t, r.rv >= q75 ? "high" : r.rv <= q50 ? "calm" : "mid");
+  }
+}
+const inRegime = (tok, tt) => state.regime === "all" || (REGIME[tok] && REGIME[tok].get(tt) === state.regime);
 const partialOf = r => state.metric === "depth" ? r.reach < state.band : r.partial;
 
 function seriesFor(token, clip) {
@@ -440,6 +473,8 @@ function buildControls() {
   seg("range", Object.keys(RANGES).map(k => [k, k === "all" ? t("r_all") : k]), "range");
   seg("scale", [["lin", t("sc_lin")],["log", t("sc_log")]], "scale");
   seg("share", [["own", t("sh_own")],["token", t("sh_token")]], "share");
+  seg("stat", [["med", t("st_med")],["tail", t("st_tail")]], "stat");
+  seg("regime", [["all", t("rg_all")],["calm", t("rg_calm")],["high", t("rg_high")]], "regime");
   const present = VENUES.filter(v => ROWS.some(r => r.venue === v));
   chips("venues", present.map(v => [v, `<span class="dot" style="background:${color(v)}"></span>${LABEL[v]}`]), state.venues, {cls:"venue"});
 }
@@ -487,6 +522,7 @@ function render() {
     (state.metric === "total_cost_bps" ? `, ${t("fee_" + state.fee)}` : state.metric === "depth" ? `, mid ${BAND_TXT[state.band]}` : "") + ")";
   document.getElementById("summary").textContent = t("summary")(mLabel(state.metric), state.lang === "zh" ? extra.replace(" (", "（").replace(/\)$/, "）").replaceAll(", ", "，") : extra, tokens.length, meta.sizeFree ? 0 : clips.length);
 
+  { const SRC = srcRows(); if (SRC.length) computeRegimes(Math.max(...SRC.map(r => r.t)) - RANGES[state.range] * 3600e3); }
   const host = document.getElementById("panels"), keepY = window.scrollY;
   host.innerHTML = ""; PANELS.length = 0;
   if (!srcRows().length) { host.innerHTML = `<div class="empty">${state.metric === "depth" ? t("depthSoon") : t("noData")}</div>`; renderTable([], []); return; }
@@ -508,14 +544,16 @@ function panel(token, clip, series, sharedValues) {
   const el = document.createElement("div"); el.className = "panel";
   const pts = Object.values(series).flat();
   // badge: venue with the best MEDIAN over the selected time range (robust to single-snapshot noise)
-  const median = a => { const x = [...a].sort((p,q) => p-q), n = x.length; return n % 2 ? x[(n-1)/2] : (x[n/2-1] + x[n/2]) / 2; };
-  const lv = Object.entries(series).map(([v, p]) => [v, {v: median(p.map(q => q.v)), partial: p.filter(q => q.partial).length * 2 > p.length, n: p.length}])
+  const lv = Object.entries(series).map(([v, p]) => {
+      const sel = p.filter(q => inRegime(token, q.t));
+      return [v, {v: statOf(sel.map(q => q.v), meta.lowerBetter), partial: sel.filter(q => q.partial).length * 2 > sel.length, n: sel.length}];
+    }).filter(([,x]) => x.n > 0)
     .sort((a,b) => meta.lowerBetter ? a[1].v - b[1].v : b[1].v - a[1].v);
   const best = lv[0];
-  const rtxt = t("rangeTxt")[state.range];
+  const blabel = t("badge")(t("rangeTxt")[state.range], state.regime === "all" ? "" : t("rg_" + state.regime), state.stat, meta.lowerBetter);
   el.innerHTML = `<div class="p-head">
       <div class="p-title">${clip == null ? token : fmtClip(clip)}<small>${clip == null ? mLabel(m) : token}</small></div>
-      ${best ? `<div class="best" title="n = ${best[1].n}">${meta.lowerBetter ? t("lowest")(rtxt) : t("deepest")(rtxt)}<br><b><span class="dot" style="background:${color(best[0])}"></span>${LABEL[best[0]]} ${fmtVal(best[1].v, m)}${best[1].partial ? "*" : ""}</b></div>` : ""}
+      ${best ? `<div class="best" title="n = ${best[1].n}">${blabel}<br><b><span class="dot" style="background:${color(best[0])}"></span>${LABEL[best[0]]} ${fmtVal(best[1].v, m)}${best[1].partial ? "*" : ""}</b></div>` : ""}
     </div><div class="chart"></div>`;
   const chart = el.querySelector(".chart");
   if (!pts.length) { chart.innerHTML = `<div class="empty">${t("noFilter")}</div>`; return [el, null]; }
@@ -537,6 +575,13 @@ function drawChart(chart, token, clip, series, sharedValues, pts) {
     s += `<text x="${X(tt)}" y="${H-6}" text-anchor="${nx > 1 && i === 0 ? "start" : nx > 1 && i === nx-1 ? "end" : "middle"}">${fmtAxisTime(new Date(tt), spanH)}</text>`;
   }
   s += `</g>`;
+  // grey bars behind high-vol snapshots (regime context, drawn before the lines)
+  const rg = REGIME[token]; if (rg && rg.size) {
+    const ts = [...new Set(pts.map(p => p.t))].sort((a,b) => a-b);
+    const half = ts.length > 1 ? Math.max(2, (X(ts[ts.length-1]) - X(ts[0])) / (ts.length - 1) / 2) : 6;
+    for (const tt of ts) if (rg.get(tt) === "high")
+      s += `<rect x="${(X(tt) - half).toFixed(1)}" y="${M.t}" width="${(2*half).toFixed(1)}" height="${H - M.t - M.b}" fill="${css("--grid")}"/>`;
+  }
   const order = VENUES.filter(v => series[v]), surf = css("--card");
   for (const v of order) {
     const p = series[v];
@@ -582,27 +627,26 @@ function syncHover(tt0, active) {
 }
 
 function renderTable(tokens, clips) {
-  const m = state.metric, meta = METRICS[m], SRC = srcRows();
+  const m = state.metric, meta = METRICS[m];
   const sub = document.getElementById("tableSub"), wrap = document.getElementById("tablewrap");
-  if (!SRC.length) { sub.textContent = ""; wrap.innerHTML = ""; return; }
-  const latest = Math.max(...SRC.map(r => r.t));
-  sub.textContent = `· ${fmtTime(new Date(latest))} · ${mLabel(m)} · ${t("bestBold")}`;
-  const venues = VENUES.filter(v => state.venues.has(v) && SRC.some(r => r.venue === v));
+  if (!srcRows().length || !tokens.length) { sub.textContent = ""; wrap.innerHTML = ""; return; }
+  const rgTxt = state.regime === "all" ? "" : " · " + t("rg_" + state.regime);
+  sub.textContent = `· ${mLabel(m)} · ${t("rangeTxt")[state.range]}${rgTxt} · ${t("st_" + state.stat)} · ${t("bestBold")}`;
   const cols = tokens.flatMap(x => clips.map(c => [x, c]));
-  const val = (v, x, c) => {
-    const rs = SRC.filter(r => r.t === latest && r.venue === v && r.token === x && (c == null || r.clip === c)
-      && (state.side === "avg" || r.side === state.side) && metricVal(r, m) != null && !isNaN(metricVal(r, m)));
-    return rs.length ? {v: rs.reduce((a,r) => a + metricVal(r, m), 0) / rs.length, partial: rs.some(partialOf)} : null;
-  };
-  const grid = venues.map(v => cols.map(([x,c]) => val(v, x, c)));
+  const per = cols.map(([x, c]) => seriesFor(x, c));
+  const venues = VENUES.filter(v => state.venues.has(v) && per.some(sr => sr[v]));
+  const grid = venues.map(v => per.map((sr, j) => {
+    const sel = (sr[v] || []).filter(q => inRegime(cols[j][0], q.t));
+    return sel.length ? {v: statOf(sel.map(q => q.v), meta.lowerBetter), partial: sel.filter(q => q.partial).length * 2 > sel.length, n: sel.length} : null;
+  }));
   const bestIdx = cols.map((_, j) => { let bi = -1; grid.forEach((row, i) => { const x = row[j];
     if (x && (bi < 0 || (meta.lowerBetter ? x.v < grid[bi][j].v : x.v > grid[bi][j].v))) bi = i; }); return bi; });
   let h = `<table><thead><tr><th>${t("venue")}</th>${cols.map(([x,c]) => `<th>${x}${c == null ? "" : " " + fmtClip(c)}</th>`).join("")}</tr></thead><tbody>`;
   venues.forEach((v, i) => {
     h += `<tr><td><span class="dot" style="background:${color(v)};margin-right:8px"></span>${LABEL[v]}</td>` +
-      cols.map((_, j) => { const x = grid[i][j]; return `<td class="${bestIdx[j] === i ? "best-c" : ""}">${x ? fmtVal(x.v, m) + (x.partial ? " *" : "") : "—"}</td>`; }).join("") + `</tr>`;
+      cols.map((_, j) => { const x = grid[i][j]; return `<td class="${bestIdx[j] === i ? "best-c" : ""}" title="n = ${x ? x.n : 0}">${x ? fmtVal(x.v, m) + (x.partial ? " *" : "") : "—"}</td>`; }).join("") + `</tr>`;
   });
-  wrap.innerHTML = h + "</tbody></table>";
+  wrap.innerHTML = h + `</tbody></table><p style="font-size:11.5px;color:var(--text-3);margin:10px 2px 0">${t("regimeNote")}</p>`;
 }
 
 /* ================= boot ================= */
