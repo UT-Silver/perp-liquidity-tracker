@@ -25,6 +25,7 @@ timedatectl set-timezone UTC || true
 echo "==> service user"
 id "$USER_NAME" >/dev/null 2>&1 || useradd --system --create-home --home-dir "$HOME_DIR" --shell /usr/sbin/nologin "$USER_NAME"
 install -d -m 700 -o "$USER_NAME" -g "$USER_NAME" /etc/perp-tape
+cd "$HOME_DIR"   # the service user cannot read the caller's cwd (e.g. /root)
 
 if [ ! -s /etc/perp-tape/token ]; then
   if [ -n "${PERP_TAPE_TOKEN:-}" ]; then
