@@ -19,7 +19,7 @@ async def lighter():
         d = (await c.get("https://mainnet.zklighter.elliot.ai/api/v1/orderBookDetails", params={"filter": "perp"})).json()
     mid = next(m["market_id"] for m in d["order_book_details"] if m["symbol"] == "BTC")
     print("lighter BTC market_id", mid)
-    async with websockets.connect("wss://mainnet.zklighter.elliot.ai/stream", ping_interval=20) as ws:
+    async with websockets.connect("wss://mainnet.zklighter.elliot.ai/stream?readonly=true", ping_interval=20) as ws:
         for ch in (f"trade/{mid}", f"order_book/{mid}", f"market_stats/{mid}"):
             await ws.send(json.dumps({"type": "subscribe", "channel": ch}))
         seen = {}; end = time.time() + 15
@@ -31,5 +31,5 @@ async def lighter():
         print("LT counts", seen)
 
 async def main():
-    await asyncio.gather(hl(), lighter(), return_exceptions=False)
+    print(await asyncio.gather(hl(), lighter(), return_exceptions=True))
 asyncio.run(main())
