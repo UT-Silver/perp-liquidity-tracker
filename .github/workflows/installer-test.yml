@@ -1,0 +1,21 @@
+name: installer-test
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run installer as on a fresh VPS (token via env instead of prompt)
+        run: sudo PERP_TAPE_TOKEN="${{ secrets.GITHUB_TOKEN }}" bash deploy/install.sh
+      - name: Let it collect for 90 s
+        run: sleep 90 && sudo journalctl -u perp-tape --no-pager | tail -20
+      - name: Check credential file is private and not in git config
+        run: |
+          sudo stat -c '%a %U %n' /etc/perp-tape/token
+          sudo -u perptape git -C /opt/perp-tape/repo config --list | grep -i -E "token|ghs_|ghp_" && exit 1 || echo "no token in git config"
+      - name: Stop (do not push from CI)
+        if: always()
+        run: sudo systemctl stop perp-tape || true

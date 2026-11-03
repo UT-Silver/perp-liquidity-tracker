@@ -27,10 +27,14 @@ id "$USER_NAME" >/dev/null 2>&1 || useradd --system --create-home --home-dir "$H
 install -d -m 700 -o "$USER_NAME" -g "$USER_NAME" /etc/perp-tape
 
 if [ ! -s /etc/perp-tape/token ]; then
-  echo
-  echo "Paste the GitHub fine-grained token (Contents: Read and write on $REPO)."
-  echo "Input is hidden. Press Enter when done."
-  read -rsp "token: " TOKEN < /dev/tty; echo
+  if [ -n "${PERP_TAPE_TOKEN:-}" ]; then
+    TOKEN="$PERP_TAPE_TOKEN"          # non-interactive (CI test) path
+  else
+    echo
+    echo "Paste the GitHub fine-grained token (Contents: Read and write on $REPO)."
+    echo "Input is hidden. Press Enter when done."
+    read -rsp "token: " TOKEN < /dev/tty; echo
+  fi
   [ -n "$TOKEN" ] || { echo "no token given"; exit 1; }
   umask 077; printf '%s' "$TOKEN" > /etc/perp-tape/token
   chown "$USER_NAME:$USER_NAME" /etc/perp-tape/token; chmod 600 /etc/perp-tape/token
