@@ -570,7 +570,7 @@ function render() {
     const shared = state.share === "token" ? data.flatMap(d => Object.values(d.series).flat().map(p => p.v)) : null;
     const row = document.createElement("section"); row.className = "token-row";
     row.innerHTML = `<div class="token-head"><h2>${token}</h2><span>${meta.sizeFree ? mLabel(state.metric) : clips.map(fmtClip).join(" · ")}</span></div>`;
-    const grid = document.createElement("div"); grid.className = "grid"; grid.style.setProperty("--cols", String(Math.min(clips.length, 4)));
+    const grid = document.createElement("div"); grid.className = "grid"; grid.style.setProperty("--cols", String(clips.length <= 4 ? clips.length : 3));
     row.appendChild(grid); host.appendChild(row);
     data.map(d => { const [el, draw] = panel(token, d.clip, d.series, shared); grid.appendChild(el); return draw; }).forEach(f => f && f());
   }

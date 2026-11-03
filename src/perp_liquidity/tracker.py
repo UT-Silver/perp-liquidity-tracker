@@ -6,7 +6,7 @@ Usage (what the GitHub Action runs):
 
 Env overrides:
     TRACK_TOKENS  comma list, default BTC,ETH,SOL,HYPE
-    TRACK_CLIPS   comma list of USD sizes, default 10000,100000,500000,1000000
+    TRACK_CLIPS   comma list of USD sizes, default 10000,100000,500000,1000000,5000000,10000000
     DATA_DIR      default ./data
     FEES_PATH     default ./config/fees.json
 """
@@ -96,7 +96,7 @@ def effective_gap(min_gap: float, data_dir: Path, now_rv_bps: float | None) -> t
 
 def main() -> int:
     tokens = [t.strip().upper() for t in os.getenv("TRACK_TOKENS", "BTC,ETH,SOL,HYPE,DOGE,XRP,PUMP,SUI,ENA,ZEC").split(",") if t.strip()]
-    clips = [float(c) for c in os.getenv("TRACK_CLIPS", "10000,100000,500000,1000000").split(",")]
+    clips = [float(c) for c in os.getenv("TRACK_CLIPS", "10000,100000,500000,1000000,5000000,10000000").split(",")]
     data_dir = Path(os.getenv("DATA_DIR", "data"))
     fees = load_fees()
 

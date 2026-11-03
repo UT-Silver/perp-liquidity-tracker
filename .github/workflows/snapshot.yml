@@ -37,7 +37,7 @@ jobs:
       - name: Take snapshot
         env:
           TRACK_TOKENS: BTC,ETH,SOL,HYPE,DOGE,XRP,PUMP,SUI,ENA,ZEC
-          TRACK_CLIPS: 10000,100000,500000,1000000
+          TRACK_CLIPS: 10000,100000,500000,1000000,5000000,10000000
           MIN_GAP_MINUTES: "45"
           FAST_GAP_MINUTES: "10"
           FORCE: ${{ inputs.force && '1' || '0' }}

@@ -8,7 +8,7 @@ Hourly cross-venue perp DEX slippage history, built on [yodablocks/perp-liquidit
 
 **Output:**
 - `data/latest.md`: latest table of total cost (slippage + base-tier taker fee, bps), averaged over buy and sell
-- `data/YYYY-MM/slippage/{TOKEN}.csv`: one row per run × venue × side × clip size ($10k / $100k / $500k / $1M); split per token so the dashboard loads only what it shows. Fees are not stored per row; the dashboard prices history from `config/fees.json` (base and top-tier taker).
+- `data/YYYY-MM/slippage/{TOKEN}.csv`: one row per run × venue × side × clip size ($10k / $100k / $500k / $1M / $5M / $10M); split per token so the dashboard loads only what it shows. Fees are not stored per row; the dashboard prices history from `config/fees.json` (base and top-tier taker).
 - `data/YYYY-MM/depth/{TOKEN}.csv`: per run × venue × side, resting notional within ±10 / ±50 / ±100 bps of mid, plus `reach_bps` (how far the fetched book extends; a band wider than reach is a lower bound)
 - `data/YYYY-MM/vol/{TOKEN}.csv`: per run, last-hour realized vol from Hyperliquid 1m candles (`rv_1h_bps`, annualized `rv_ann_pct`), used for calm/high-vol regimes and adaptive sampling (snapshot gap drops from 45 to 10 min when BTC 1h RV > 1.5x its trailing median; needs the external trigger every 15 min)
 - `data/YYYY-MM/funding.csv`, `open_interest.csv`, `errors.csv`
