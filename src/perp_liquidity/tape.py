@@ -309,11 +309,13 @@ async def lighter_stream(c: Collector, tokens: list[str]) -> None:
                         for tr in msg.get("trades") or []:
                             if tr.get("type") != "trade":
                                 continue
-                            # is_maker_ask: maker was the ask -> taker bought
+                            # is_maker_ask: maker was the ask -> taker bought (taker = bid order)
                             side = 1 if tr.get("is_maker_ask") else -1
+                            # tx_hash differs per fill on Lighter; group by the taker's order id instead
+                            taker_oid = tr.get("bid_id_str" if side > 0 else "ask_id_str") or tr.get("tx_hash")
                             tok = markets.get(int(tr["market_id"]))
                             if tok:
-                                c.on_fill("lighter", tok, tr["tx_hash"], side, int(tr["timestamp"]),
+                                c.on_fill("lighter", tok, f"{side}:{taker_oid}", side, int(tr["timestamp"]),
                                           float(tr["price"]), float(tr["size"]))
         except Exception as e:  # noqa: BLE001
             log.warning("lighter stream error: %s; reconnecting", e)
