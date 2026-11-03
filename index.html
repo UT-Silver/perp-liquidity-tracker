@@ -17,6 +17,7 @@
   --nav: rgba(251,251,253,.78);
   --shadow: 0 1px 2px rgba(0,0,0,.03), 0 8px 28px rgba(0,0,0,.05);
   --tip: rgba(255,255,255,.86);
+  --volband: rgba(255,149,0,.13);
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
   --s5: #e87ba4; --s6: #008300; --s7: #6250d6;
 }
@@ -32,6 +33,7 @@
   --nav: rgba(22,22,23,.72);
   --shadow: none;
   --tip: rgba(44,44,46,.88);
+  --volband: rgba(255,159,10,.20);
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
   --s5: #d55181; --s6: #008300; --s7: #9085e9;
 }
@@ -47,6 +49,7 @@
     --nav: rgba(22,22,23,.72);
     --shadow: none;
     --tip: rgba(44,44,46,.88);
+  --volband: rgba(255,159,10,.20);
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
     --s5: #d55181; --s6: #008300; --s7: #9085e9;
   }
@@ -117,6 +120,7 @@ a:hover { text-decoration: underline; }
 .slot .ph { font-size: 12px; color: var(--text-3); height: 30px; display: flex; align-items: center; padding-left: 2px; }
 
 .summary { font-size: 13px; color: var(--text-2); margin: 0 0 18px; }
+.summary .vb { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--volband); vertical-align: -1px; margin: 0 4px 0 10px; }
 .token-row { margin-bottom: 30px; }
 .token-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px 2px; }
 .token-head h2 { font-size: 21px; font-weight: 700; letter-spacing: -.02em; margin: 0; }
@@ -240,6 +244,7 @@ const I18N = {
     rg_all: "全部", rg_calm: "平静", rg_high: "高波动",
     badge: (rng, rg, st, low) => `${rng}${rg ? " · " + rg : ""} · ${st === "med" ? "中位数" : "尾部（最差 10%）"}${low ? "最低" : "最深"}`,
     statsTable: "所选时段统计", nRuns: "快照数",
+    volLegend: "高波动时段", volWait: (n, k) => `波动率数据积累中（${n}/${k} 次快照，2026-11-03 起记录），够数后显示高波动时段并启用「平静 / 高波动」筛选`,
     regimeNote: "高波动 = 该币过去 1 小时已实现波动率排在所选时段前 25% 的快照；平静 = 后 50%。图中灰色竖条为高波动时段。",
     latest: "最新", snaps: "快照", snapsUnit: "次",
     loading: "加载数据中…", noData: "还没有数据", noFilter: "当前筛选没有数据",
@@ -273,6 +278,7 @@ const I18N = {
     rg_all: "All", rg_calm: "Calm", rg_high: "High vol",
     badge: (rng, rg, st, low) => `${rng}${rg ? " · " + rg : ""} · ${low ? "lowest" : "deepest"} ${st === "med" ? "median" : "worst-10% tail"}`,
     statsTable: "Statistics for selection", nRuns: "Snapshots",
+    volLegend: "high-vol snapshots", volWait: (n, k) => `volatility data accumulating (${n}/${k} snapshots, recorded since 2026-11-03); high-vol bands and the calm / high-vol filter appear once there are enough`,
     regimeNote: "High vol = snapshots whose token 1h realized vol is in the top 25% of the selected range; calm = bottom 50%. Grey bars on charts mark high-vol snapshots.",
     latest: "Latest", snaps: "Snapshots", snapsUnit: "",
     loading: "Loading data…", noData: "No data yet", noFilter: "No data for this selection",
@@ -320,7 +326,8 @@ const state = {
 let ROWS = [], DROWS = [], ALL_TOKENS = [], ALL_CLIPS = [], FEES = {}, MANIFEST = null;
 const LOADED = new Map(), DLOADED = new Map(), VLOADED = new Map(), TLOADED = new Map(), PANELS = [];
 let TROWS = [];
-let REGIME = {};   // token -> Map(run_ts -> "calm" | "mid" | "high"), recomputed per range
+let REGIME = {}, REGIME_N = {};
+const MIN_REGIME_N = 6;   // token -> Map(run_ts -> "calm" | "mid" | "high"), recomputed per range
 
 /* ================= helpers ================= */
 const root = document.getElementById("root");
@@ -397,11 +404,12 @@ const quantile = (a, q) => { const x = [...a].sort((p,r) => p-r); if (!x.length)
 // "worst 10%": high tail for costs, low tail for depth
 const statOf = (vals, lowerBetter) => state.stat === "med" ? quantile(vals, .5) : quantile(vals, lowerBetter ? .9 : .1);
 function computeRegimes(cutoff) {
-  REGIME = {};
+  REGIME = {}; REGIME_N = {};
   for (const [tok, rows] of VLOADED) {
     const inR = rows.filter(r => r.t >= cutoff && r.rv > 0);
     const m = new Map(); REGIME[tok] = m;
-    if (inR.length < 8) continue;           // too few snapshots to split into regimes
+    REGIME_N[tok] = inR.length;
+    if (inR.length < MIN_REGIME_N) continue;  // too few snapshots to split into regimes
     const q50 = quantile(inR.map(r => r.rv), .5), q75 = quantile(inR.map(r => r.rv), .75);
     for (const r of inR) m.set(r.t, r.rv >= q75 ? "high" : r.rv <= q50 ? "calm" : "mid");
   }
@@ -548,9 +556,12 @@ function render() {
   const clips = meta.sizeFree ? [null] : meta.buckets ? BUCKETS.filter(b => state.buckets.has(b)) : ALL_CLIPS.filter(c => state.clips.has(c));
   const extra = ` (${mDesc(state.metric)}, ${t("s_" + state.side)}` +
     (state.metric === "total_cost_bps" ? `, ${t("fee_" + state.fee)}` : state.metric === "depth" ? `, mid ${BAND_TXT[state.band]}` : state.metric === "realized" ? `, ${t("rl_" + state.real)}` : "") + ")";
-  document.getElementById("summary").textContent = t("summary")(mLabel(state.metric), state.lang === "zh" ? extra.replace(" (", "（").replace(/\)$/, "）").replaceAll(", ", "，") : extra, tokens.length, meta.sizeFree ? 0 : clips.length);
+  const sumEl = document.getElementById("summary");
+  sumEl.textContent = t("summary")(mLabel(state.metric), state.lang === "zh" ? extra.replace(" (", "（").replace(/\)$/, "）").replaceAll(", ", "，") : extra, tokens.length, meta.sizeFree ? 0 : clips.length);
 
   { const SRC = srcRows(); if (SRC.length) computeRegimes(Math.max(...SRC.map(r => r.t)) - RANGES[state.range] * 3600e3); }
+  { const ready = tokens.some(x => REGIME[x] && REGIME[x].size), n = Math.max(0, ...tokens.map(x => REGIME_N[x] || 0));
+    sumEl.insertAdjacentHTML("beforeend", ready ? `<span class="vb"></span>${t("volLegend")}` : ` · ${t("volWait")(n, MIN_REGIME_N)}`); }
   const host = document.getElementById("panels"), keepY = window.scrollY;
   host.innerHTML = ""; PANELS.length = 0;
   if (!srcRows().length) { host.innerHTML = `<div class="empty">${state.metric === "depth" ? t("depthSoon") : state.metric === "realized" ? t("realSoon") : t("noData")}</div>`; renderTable([], []); return; }
@@ -609,7 +620,7 @@ function drawChart(chart, token, clip, series, sharedValues, pts) {
     const ts = [...new Set(pts.map(p => p.t))].sort((a,b) => a-b);
     const half = ts.length > 1 ? Math.max(2, (X(ts[ts.length-1]) - X(ts[0])) / (ts.length - 1) / 2) : 6;
     for (const tt of ts) if (rg.get(tt) === "high")
-      s += `<rect x="${(X(tt) - half).toFixed(1)}" y="${M.t}" width="${(2*half).toFixed(1)}" height="${H - M.t - M.b}" fill="${css("--grid")}"/>`;
+      s += `<rect x="${(X(tt) - half).toFixed(1)}" y="${M.t}" width="${(2*half).toFixed(1)}" height="${H - M.t - M.b}" fill="${css("--volband")}"/>`;
   }
   const order = VENUES.filter(v => series[v]), surf = css("--card");
   for (const v of order) {
