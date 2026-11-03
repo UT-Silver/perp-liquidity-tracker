@@ -208,8 +208,10 @@ def write_manifest(data_dir: Path, updated: str) -> None:
                 vd = p / "vol"
                 if vd.is_dir():
                     vol[p.name] = sorted(f.stem for f in vd.glob("*.csv"))
-    (data_dir / "manifest.json").write_text(
-        json.dumps({"months": months, "tokens": tokens, "depth": depth, "vol": vol, "updated": updated}) + "\n")
+    tape = {p.name: sorted(f.stem for f in (p / "tape").glob("*.csv"))
+            for p in sorted(data_dir.iterdir()) if p.is_dir() and (p / "tape").is_dir()}
+    (data_dir / "manifest.json").write_text(json.dumps(
+        {"months": months, "tokens": tokens, "depth": depth, "vol": vol, "tape": tape, "updated": updated}) + "\n")
 
 
 def write_latest(path: Path, ts: str, tokens, clips, slip_rows, err_rows) -> None:

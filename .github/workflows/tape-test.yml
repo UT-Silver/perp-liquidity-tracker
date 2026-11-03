@@ -1,0 +1,16 @@
+name: tape-test
+on:
+  workflow_dispatch:
+    inputs:
+      seconds: {description: "how long to collect", default: "300"}
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -q .
+      - run: python -m perp_liquidity.tape --data-dir /tmp/tape --duration ${{ inputs.seconds }} --flush-seconds 100000
+      - run: python tools/tape_report.py /tmp/tape
