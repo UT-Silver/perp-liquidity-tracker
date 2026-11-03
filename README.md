@@ -13,6 +13,8 @@ Hourly cross-venue perp DEX slippage history, built on [yodablocks/perp-liquidit
 - `data/YYYY-MM/vol/{TOKEN}.csv`: per run, last-hour realized vol from Hyperliquid 1m candles (`rv_1h_bps`, annualized `rv_ann_pct`), used for calm/high-vol regimes and adaptive sampling (snapshot gap drops from 45 to 10 min when BTC 1h RV > 1.5x its trailing median; needs the external trigger every 15 min)
 - `data/YYYY-MM/funding.csv`, `open_interest.csv`, `errors.csv`
 
+**Trade tape (realized execution):** `python -m perp_liquidity.tape` streams public fills and top of book from Hyperliquid and Lighter, merges fills into taker orders, and writes hourly per-size-bucket stats to `data/YYYY-MM/tape/{TOKEN}.csv` (fill cost vs pre-trade mid, 10/60 s impact, 60 s markout); taker orders of $100k+ are kept individually in `tape_large/`. It runs as a long-lived service on a small VPS (`deploy/install.sh`) and pushes hourly. `tape-test` workflow runs it for a few minutes on a GitHub runner for checks.
+
 **Changes vs upstream:**
 1. Fees are applied: `config/fees.json` → `taker_bps`, `total_cost_bps` (upstream had a fees file that nothing read).
 2. Deeper books: Hyperliquid stitches the full-precision book (max 20 levels) with `nSigFigs=4` and `3` aggregated books; Lighter limit 50→250; Aster 50→500. `book_depth_usd` records how much was captured, and `partial=True` means the clip was not fully filled.
