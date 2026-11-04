@@ -116,7 +116,7 @@ a:hover { text-decoration: underline; }
 .tb-row + .tb-row { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--grid); }
 .ctl > label { display: block; font-size: 11px; font-weight: 500; color: var(--text-3); margin: 0 0 5px 2px; letter-spacing: 0; }
 .ctl label .muted { font-weight: 400; }
-.slot { min-width: 330px; }               /* fixed slot for metric-specific option: no reflow */
+.slot { min-width: 470px; }               /* fixed slot for metric-specific option: no reflow */
 .slot .ph { font-size: 12px; color: var(--text-3); height: 30px; display: flex; align-items: center; padding-left: 2px; }
 
 .summary { font-size: 13px; color: var(--text-2); margin: 0 0 18px; }
@@ -234,6 +234,10 @@ const I18N = {
     noOption: "该指标无额外选项",
     m_total: "总成本", m_slip: "仅滑点", m_spread: "买卖价差", m_depth: "盘口深度", m_real: "实际成交",
     d_real: "真实吃单成交，按小时，bps", lblReal: "实际成交口径", rl_cost: "成交成本", rl_imp60: "60 秒价格冲击", rl_mo60: "60 秒成交后走势",
+    m_ord: "挂单结构", d_ord: "仅 Hyperliquid、Lighter 提供", lblOrd: "挂单结构口径",
+    od_top: "最优价订单数", od_o10: "±10bps 订单数", od_avg10: "±10bps 平均单笔", od_mk10: "±10bps 挂单账户",
+    ordSoon: "挂单结构从 2026-11-04 起记录（仅 Hyperliquid、Lighter 的接口提供订单数；挂单账户数仅 Lighter 提供）",
+    filled: p => `成交 ${p}%`, allPartial: "各家盘口都接不住",
     lblBuckets: "成交规模", realSoon: "实际成交数据来自采集服务器，部署后每小时更新一次（目前覆盖 Hyperliquid 和 Lighter）",
     d_total: "滑点 + taker 费，bps", d_slip: "不含手续费，bps", d_spread: "bps", d_depth: "mid 附近挂单金额",
     s_avg: "买卖平均", s_buy: "买入", s_sell: "卖出", r_all: "全部",
@@ -242,7 +246,7 @@ const I18N = {
     rangeTxt: {"24h":"24 小时", "7d":"7 天", "30d":"30 天", "all":"全部时段"},
     lblStat: "统计", lblRegime: "市场状态", st_med: "中位数", st_tail: "最差 10%",
     rg_all: "全部", rg_calm: "平静", rg_high: "高波动",
-    badge: (rng, rg, st, low) => `${rng}${rg ? " · " + rg : ""} · ${st === "med" ? "中位数" : "尾部（最差 10%）"}${low ? "最低" : "最深"}`,
+    badge: (rng, rg, st, kind) => `${rng}${rg ? " · " + rg : ""} · ${st === "med" ? "中位数" : "尾部（最差 10%）"}${{low: "最低", deep: "最深", most: "最多"}[kind]}`,
     statsTable: "所选时段统计", nRuns: "快照数",
     volLegend: "高波动时段", volWait: (n, k) => `波动率数据积累中（${n}/${k} 次快照，2026-11-03 起记录），够数后显示高波动时段并启用「平静 / 高波动」筛选`,
     regimeNote: "高波动 = 该币过去 1 小时已实现波动率排在所选时段前 25% 的快照；平静 = 后 50%。图中灰色竖条为高波动时段。",
@@ -256,6 +260,7 @@ const I18N = {
       <b>最高档</b>：各家公布的最低 taker（最高成交量档 + 最大代币折扣），属做市商量级，是费率下限：Hyperliquid 1.44 · Lighter 1.96 · Aster 1.6 · edgeX 2.4（Aster、edgeX 未经官方核实）。<br>
       <b>盘口深度</b> = mid 上下 ±10 bps / ±50 bps / ±1% 以内的挂单金额（买入看卖盘，卖出看买盘），各家同口径。
       <b>空心点</b>：滑点类指标表示盘口不够成交整笔单；深度指标表示抓到的盘口没覆盖到该范围。两种情况数值都偏乐观（滑点偏低 / 深度是下限）。<br>
+      <b>挂单结构</b>：每次快照统计最优价的订单数、mid ±10 bps 以内的订单数、平均单笔金额（该范围挂单金额 ÷ 订单数），以及挂单账户数（仅 Lighter 提供）。订单越多、来自越多账户，说明流动性越分散、越不依赖少数做市商。成交比例：大单把盘口吃穿时，标注实际成交了多少。<br>
       <b>实际成交</b>：实时采集的公开成交，按吃单订单合并后计算。成交成本 = 成交均价相对成交前 mid 的偏离（含半个价差，不含手续费）；60 秒价格冲击 = 60 秒后 mid 相对成交前 mid 的移动；60 秒成交后走势 = 60 秒后 mid 相对成交价的移动，正值表示价格继续朝吃单方向走（吃单方信息更多）。空心点 = 该小时样本少于 5 笔。<br>
       数据：<a href="https://github.com/UT-Silver/perp-liquidity-tracker/tree/main/data">github.com/UT-Silver/perp-liquidity-tracker</a>`,
     themeAuto: "跟随系统", themeLight: "浅色", themeDark: "深色",
@@ -268,6 +273,10 @@ const I18N = {
     noOption: "No options for this metric",
     m_total: "Total cost", m_slip: "Slippage", m_spread: "Spread", m_depth: "Depth", m_real: "Realized",
     d_real: "actual taker fills, hourly, bps", lblReal: "Realized measure", rl_cost: "Fill cost", rl_imp60: "60s impact", rl_mo60: "60s markout",
+    m_ord: "Book structure", d_ord: "Hyperliquid and Lighter only", lblOrd: "Structure measure",
+    od_top: "Orders at best", od_o10: "Orders ±10bps", od_avg10: "Avg order ±10bps", od_mk10: "Makers ±10bps",
+    ordSoon: "Book structure is recorded from 2026-11-04 (only Hyperliquid and Lighter expose order counts; maker accounts only on Lighter)",
+    filled: p => `${p}% filled`, allPartial: "no venue fills it",
     lblBuckets: "Fill size", realSoon: "Realized-fill data comes from the collector server and updates hourly once deployed (Hyperliquid and Lighter for now)",
     d_total: "slippage + taker fee, bps", d_slip: "excl. fees, bps", d_spread: "bps", d_depth: "resting notional near mid",
     s_avg: "Buy/sell avg", s_buy: "Buy", s_sell: "Sell", r_all: "All",
@@ -276,7 +285,7 @@ const I18N = {
     rangeTxt: {"24h":"24h", "7d":"7d", "30d":"30d", "all":"all-time"},
     lblStat: "Statistic", lblRegime: "Market regime", st_med: "Median", st_tail: "Worst 10%",
     rg_all: "All", rg_calm: "Calm", rg_high: "High vol",
-    badge: (rng, rg, st, low) => `${rng}${rg ? " · " + rg : ""} · ${low ? "lowest" : "deepest"} ${st === "med" ? "median" : "worst-10% tail"}`,
+    badge: (rng, rg, st, kind) => `${rng}${rg ? " · " + rg : ""} · ${{low: "lowest", deep: "deepest", most: "most"}[kind]} ${st === "med" ? "median" : "worst-10% tail"}`,
     statsTable: "Statistics for selection", nRuns: "Snapshots",
     volLegend: "high-vol snapshots", volWait: (n, k) => `volatility data accumulating (${n}/${k} snapshots, recorded since 2026-11-03); high-vol bands and the calm / high-vol filter appear once there are enough`,
     regimeNote: "High vol = snapshots whose token 1h realized vol is in the top 25% of the selected range; calm = bottom 50%. Grey bars on charts mark high-vol snapshots.",
@@ -290,6 +299,7 @@ const I18N = {
       <b>Top tier</b>: best published taker (top volume tier + max token discount), market-maker scale, i.e. a floor: Hyperliquid 1.44 · Lighter 1.96 · Aster 1.6 · edgeX 2.4 (Aster, edgeX unverified).<br>
       <b>Depth</b> = resting notional within ±10 bps / ±50 bps / ±1% of mid (buy side = asks, sell side = bids), same definition on every venue.
       <b>Hollow points</b>: for cost metrics, the book was too thin to fill the whole order; for depth, the fetched book didn't reach the band. Both are optimistic (cost too low / depth a lower bound).<br>
+      <b>Book structure</b>: per snapshot, orders at the best price, orders within ±10 bps of mid, average order size (band notional ÷ orders), and distinct maker accounts (Lighter only). More orders from more accounts = liquidity less dependent on a few market makers. Fill %: when a large order exhausts the fetched book, how much of it actually filled.<br>
       <b>Realized</b>: live public fills merged into taker orders. Fill cost = VWAP vs pre-trade mid (incl. half spread, excl. fees); 60s impact = mid 60 s later vs pre-trade mid; 60s markout = mid 60 s later vs fill price, positive when price kept moving the taker's way (more informed takers). Hollow = fewer than 5 fills that hour.<br>
       Data: <a href="https://github.com/UT-Silver/perp-liquidity-tracker/tree/main/data">github.com/UT-Silver/perp-liquidity-tracker</a>`,
     themeAuto: "System", themeLight: "Light", themeDark: "Dark",
@@ -309,8 +319,10 @@ const METRICS = {
   spread_bps:     {k:"spread",sizeFree:true,  lowerBetter:true},
   depth:          {k:"depth", sizeFree:true,  lowerBetter:false},
   realized:       {k:"real",  sizeFree:false, lowerBetter:true, buckets:true},
+  orders:         {k:"ord",   sizeFree:true,  lowerBetter:false},
 };
 const BUCKETS = ["<10k", "10k-100k", "100k-1M", ">=1M"];
+const ORD_MEASURES = ["top", "o10", "avg10", "mk10"];
 const BUCKET_TXT = {"<10k": "<$10k", "10k-100k": "$10k–100k", "100k-1M": "$100k–1M", ">=1M": "≥$1M"};
 const REAL_COL = {cost: {med: "cost_med_bps", tail: "cost_p90_bps"}, imp60: {med: "imp60_med_bps", tail: "imp60_med_bps"}, mo60: {med: "mo60_med_bps", tail: "mo60_med_bps"}};
 const RANGES = {"24h":24, "7d":168, "30d":720, "all":Infinity};
@@ -320,12 +332,13 @@ const browserLang = (navigator.language || "zh").toLowerCase().startsWith("zh") 
 const state = {
   lang: store.get("pdt.lang", browserLang), theme: store.get("pdt.theme", "auto"),
   tokens: new Set(["BTC","ETH","SOL","HYPE"]), clips: new Set([10000, 100000, 500000, 1000000]),
-  metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base", band: 50, stat: "med", regime: "all", real: "cost", buckets: new Set(["10k-100k", "100k-1M", ">=1M"]),
+  metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base", band: 50, stat: "med", regime: "all", real: "cost", ord: "o10", buckets: new Set(["10k-100k", "100k-1M", ">=1M"]),
   venues: new Set(["hyperliquid","lighter","aster","edgex"]),
 };
 let ROWS = [], DROWS = [], ALL_TOKENS = [], ALL_CLIPS = [], FEES = {}, MANIFEST = null;
 const LOADED = new Map(), DLOADED = new Map(), VLOADED = new Map(), TLOADED = new Map(), PANELS = [];
-let TROWS = [];
+let TROWS = [], OROWS = [];
+const OLOADED = new Map();
 let REGIME = {}, REGIME_N = {};
 const MIN_REGIME_N = 6;   // token -> Map(run_ts -> "calm" | "mid" | "high"), recomputed per range
 
@@ -335,13 +348,17 @@ const css = n => getComputedStyle(root).getPropertyValue(n).trim();
 const color = v => css(`--s${SLOT[v]}`);
 const locale = () => state.lang === "zh" ? "zh-CN" : "en-US";
 const fmtClip = c => typeof c === "string" ? BUCKET_TXT[c] : c >= 1e6 ? `$${c/1e6}M` : `$${c/1e3}k`;
-const fmtVal = (v, m) => v == null || isNaN(v) ? "—" : m === "depth"
+const fmtVal = (v, m) => v == null || isNaN(v) ? "—"
+  : m === "orders" ? (state.ord === "avg10" ? (v >= 1e6 ? `$${(v/1e6).toFixed(1)}M` : `$${(v/1e3).toFixed(1)}k`) : Math.round(v).toLocaleString())
+  : m === "depth"
   ? (v >= 1e6 ? `$${(v/1e6).toFixed(v >= 1e8 ? 0 : 1)}M` : `$${(v/1e3).toFixed(0)}k`)
   : Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2);
 const fmtTime = d => d.toLocaleString(locale(), {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit", hour12:false});
 const fmtAxisTime = (d, spanH) => spanH > 48 ? d.toLocaleString(locale(), {month:"short", day:"numeric"})
   : d.toLocaleString(locale(), {hour:"2-digit", minute:"2-digit", hour12:false});
 const mLabel = m => t("m_" + METRICS[m].k), mDesc = m => t("d_" + METRICS[m].k);
+const star = q => !q || !q.partial ? "" : (q.fill != null && q.fill < 0.999 && ["slippage_bps","total_cost_bps"].includes(state.metric))
+  ? ` *<span style="font-weight:400;color:var(--text-3)"> ${t("filled")(Math.round(q.fill * 100))}</span>` : " *";
 function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/); const head = lines.shift().split(",");
   return lines.map(l => { const c = l.split(","); const o = {}; head.forEach((h,i) => o[h] = c[i]); return o; });
@@ -371,6 +388,7 @@ async function ensureLoaded() {
     LOADED.set(tok, txt.filter(Boolean).flatMap(parseCSV).map(r => ({
       t: +new Date(r.run_ts), venue: r.venue, token: tok, side: r.side, clip: +r.clip_usd,
       slippage_bps: +r.slippage_bps, spread_bps: r.spread_bps === "" ? null : +r.spread_bps, partial: r.partial === "True",
+      fill: r.filled_usd && +r.clip_usd ? Math.min(1, +r.filled_usd / +r.clip_usd) : 1,
     })));
   }));
   await Promise.all([...state.tokens].filter(x => !DLOADED.has(x)).map(async tok => {
@@ -392,13 +410,25 @@ async function ensureLoaded() {
     TLOADED.set(tok, txt.filter(Boolean).flatMap(parseCSV).map(r => ({...r, t: +new Date(r.hour), token: tok, clip: r.bucket, side: "both", nfills: +r.n})));
   }));
   TROWS = [...TLOADED.values()].flat();
+  await Promise.all([...state.tokens].filter(x => !OLOADED.has(x)).map(async tok => {
+    const ms = months.filter(m => ((MANIFEST.orders || {})[m] || []).includes(tok));
+    const txt = await Promise.all(ms.map(m => fetch(`data/${m}/orders/${tok}.csv`, {cache:"no-store"}).then(r => r.ok ? r.text() : "")));
+    const dIdx = new Map((DLOADED.get(tok) || []).map(d => [`${d.venue}|${d.t}|${d.side}`, d.d[10]]));
+    OLOADED.set(tok, txt.filter(Boolean).flatMap(parseCSV).map(r => {
+      const t0 = +new Date(r.run_ts), side = r.side === "ask" ? "buy" : "sell", o10 = +r.orders_10bps, d10 = dIdx.get(`${r.venue}|${t0}|${side}`);
+      return {t: t0, venue: r.venue, token: tok, side, reach: +r.reach_bps,
+              top: +r.top_orders, o10, avg10: d10 && o10 ? d10 / o10 : null, mk10: r.makers_10bps === "" ? null : +r.makers_10bps};
+    }));
+  }));
+  OROWS = [...OLOADED.values()].flat();
   ROWS = [...LOADED.values()].flat(); DROWS = [...DLOADED.values()].flat();
   ALL_CLIPS = [...new Set(ROWS.map(r => r.clip))].sort((a,b) => a-b);
 }
 const metricVal = (r, m) => m === "total_cost_bps" ? (FEES[r.venue] ? r.slippage_bps + FEES[r.venue][state.fee] : null)
   : m === "depth" ? r.d[state.band]
-  : m === "realized" ? (r[REAL_COL[state.real][state.stat]] === "" ? null : +r[REAL_COL[state.real][state.stat]]) : r[m];
-const srcRows = () => state.metric === "depth" ? DROWS : state.metric === "realized" ? TROWS : ROWS;
+  : m === "realized" ? (r[REAL_COL[state.real][state.stat]] === "" ? null : +r[REAL_COL[state.real][state.stat]])
+  : m === "orders" ? r[state.ord] : r[m];
+const srcRows = () => state.metric === "depth" ? DROWS : state.metric === "realized" ? TROWS : state.metric === "orders" ? OROWS : ROWS;
 const quantile = (a, q) => { const x = [...a].sort((p,r) => p-r); if (!x.length) return NaN;
   const i = (x.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return x[lo] + (x[hi] - x[lo]) * (i - lo); };
 // "worst 10%": high tail for costs, low tail for depth
@@ -421,7 +451,8 @@ const inRegime = (tok, tt) => {
   for (const [k, v] of m) if (k >= tt && k < tt + 3600e3) return v === state.regime;   // hourly rows: snapshot inside that hour
   return false;
 };
-const partialOf = r => state.metric === "depth" ? r.reach < state.band : state.metric === "realized" ? r.nfills < 5 : r.partial;
+const partialOf = r => state.metric === "depth" ? r.reach < state.band : state.metric === "realized" ? r.nfills < 5
+  : state.metric === "orders" ? r.reach < 10 : r.partial;
 
 function seriesFor(token, clip) {
   const m = state.metric, SRC = srcRows(); if (!SRC.length) return {};
@@ -433,11 +464,12 @@ function seriesFor(token, clip) {
       if (r.venue !== v || r.token !== token || r.t < cutoff) continue;
       if (clip != null && r.clip !== clip) continue;
       if (state.side !== "avg" && r.side !== "both" && r.side !== state.side) continue;
-      const e = byT.get(r.t) || {sum:0, n:0, partial:false}, x = metricVal(r, m);
+      const e = byT.get(r.t) || {sum:0, n:0, partial:false, fsum:0, fn:0}, x = metricVal(r, m);
       if (x != null && !isNaN(x)) { e.sum += x; e.n++; }
+      if (r.fill != null) { e.fsum += r.fill; e.fn++; }
       e.partial ||= partialOf(r); byT.set(r.t, e);
     }
-    const pts = [...byT].filter(([,e]) => e.n).map(([tt,e]) => ({t: tt, v: e.sum/e.n, partial: e.partial})).sort((a,b) => a.t-b.t);
+    const pts = [...byT].filter(([,e]) => e.n).map(([tt,e]) => ({t: tt, v: e.sum/e.n, partial: e.partial, fill: e.fn ? e.fsum/e.fn : null})).sort((a,b) => a.t-b.t);
     if (pts.length) out[v] = pts;
   }
   return out;
@@ -496,6 +528,9 @@ function buildControls() {
   } else if (state.metric === "depth") {
     sl.textContent = t("lblBand"); sb.innerHTML = `<div class="seg" id="slotSeg"></div>`;
     seg("slotSeg", [[10, BAND_TXT[10]],[50, BAND_TXT[50]],[100, BAND_TXT[100]]], "band");
+  } else if (state.metric === "orders") {
+    sl.textContent = t("lblOrd"); sb.innerHTML = `<div class="seg" id="slotSeg"></div>`;
+    seg("slotSeg", ORD_MEASURES.map(k => [k, t("od_" + k)]), "ord");
   } else if (state.metric === "realized") {
     sl.textContent = t("lblReal"); sb.innerHTML = `<div class="seg" id="slotSeg"></div>`;
     seg("slotSeg", [["cost", t("rl_cost")],["imp60", t("rl_imp60")],["mo60", t("rl_mo60")]], "real");
@@ -555,7 +590,7 @@ function render() {
   const tokens = ALL_TOKENS.filter(x => state.tokens.has(x));
   const clips = meta.sizeFree ? [null] : meta.buckets ? BUCKETS.filter(b => state.buckets.has(b)) : ALL_CLIPS.filter(c => state.clips.has(c));
   const extra = ` (${mDesc(state.metric)}, ${t("s_" + state.side)}` +
-    (state.metric === "total_cost_bps" ? `, ${t("fee_" + state.fee)}` : state.metric === "depth" ? `, mid ${BAND_TXT[state.band]}` : state.metric === "realized" ? `, ${t("rl_" + state.real)}` : "") + ")";
+    (state.metric === "total_cost_bps" ? `, ${t("fee_" + state.fee)}` : state.metric === "depth" ? `, mid ${BAND_TXT[state.band]}` : state.metric === "realized" ? `, ${t("rl_" + state.real)}` : state.metric === "orders" ? `, ${t("od_" + state.ord)}` : "") + ")";
   const sumEl = document.getElementById("summary");
   sumEl.textContent = t("summary")(mLabel(state.metric), state.lang === "zh" ? extra.replace(" (", "（").replace(/\)$/, "）").replaceAll(", ", "，") : extra, tokens.length, meta.sizeFree ? 0 : clips.length);
 
@@ -564,7 +599,7 @@ function render() {
     sumEl.insertAdjacentHTML("beforeend", ready ? `<span class="vb"></span>${t("volLegend")}` : ` · ${t("volWait")(n, MIN_REGIME_N)}`); }
   const host = document.getElementById("panels"), keepY = window.scrollY;
   host.innerHTML = ""; PANELS.length = 0;
-  if (!srcRows().length) { host.innerHTML = `<div class="empty">${state.metric === "depth" ? t("depthSoon") : state.metric === "realized" ? t("realSoon") : t("noData")}</div>`; renderTable([], []); return; }
+  if (!srcRows().length) { host.innerHTML = `<div class="empty">${state.metric === "depth" ? t("depthSoon") : state.metric === "realized" ? t("realSoon") : state.metric === "orders" ? t("ordSoon") : t("noData")}</div>`; renderTable([], []); return; }
   for (const token of tokens) {
     const data = clips.map(c => ({clip: c, series: seriesFor(token, c)}));
     const shared = state.share === "token" ? data.flatMap(d => Object.values(d.series).flat().map(p => p.v)) : null;
@@ -585,15 +620,18 @@ function panel(token, clip, series, sharedValues) {
   // badge: venue with the best MEDIAN over the selected time range (robust to single-snapshot noise)
   const lv = Object.entries(series).map(([v, p]) => {
       const sel = p.filter(q => inRegime(token, q.t));
-      return [v, {v: statOf(sel.map(q => q.v), meta.lowerBetter), partial: sel.filter(q => q.partial).length * 2 > sel.length, n: sel.length}];
+      const fills = sel.map(q => q.fill).filter(f => f != null);
+      return [v, {v: statOf(sel.map(q => q.v), meta.lowerBetter), partial: sel.filter(q => q.partial).length * 2 > sel.length, n: sel.length,
+                  fill: fills.length ? fills.reduce((a, b) => a + b, 0) / fills.length : null}];
     }).filter(([,x]) => x.n > 0)
-    .sort((a,b) => meta.lowerBetter ? a[1].v - b[1].v : b[1].v - a[1].v);
-  const neutral = m === "realized" && state.real === "mo60";
+    .sort((a,b) => (a[1].partial - b[1].partial) || (meta.lowerBetter ? a[1].v - b[1].v : b[1].v - a[1].v));
+  const neutral = (m === "realized" && state.real === "mo60") || (m === "orders" && state.ord === "avg10");
   const best = neutral ? null : lv[0];
-  const blabel = t("badge")(t("rangeTxt")[state.range], state.regime === "all" ? "" : t("rg_" + state.regime), state.stat, meta.lowerBetter);
+  const blabel = t("badge")(t("rangeTxt")[state.range], state.regime === "all" ? "" : t("rg_" + state.regime), state.stat, meta.lowerBetter ? "low" : m === "orders" ? "most" : "deep");
   el.innerHTML = `<div class="p-head">
       <div class="p-title">${clip == null ? token : fmtClip(clip)}<small>${clip == null ? mLabel(m) : token}</small></div>
-      ${best ? `<div class="best" title="n = ${best[1].n}">${blabel}<br><b><span class="dot" style="background:${color(best[0])}"></span>${LABEL[best[0]]} ${fmtVal(best[1].v, m)}${best[1].partial ? "*" : ""}</b></div>` : ""}
+      ${best && best[1].partial ? `<div class="best">${blabel}<br><b style="font-weight:500;color:var(--text-2)">${t("allPartial")}</b></div>` : ""}
+      ${best && !best[1].partial ? `<div class="best" title="n = ${best[1].n}">${blabel}<br><b><span class="dot" style="background:${color(best[0])}"></span>${LABEL[best[0]]} ${fmtVal(best[1].v, m)}${star(best[1])}</b></div>` : ""}
     </div><div class="chart"></div>`;
   const chart = el.querySelector(".chart");
   if (!pts.length) { chart.innerHTML = `<div class="empty">${t("noFilter")}</div>`; return [el, null]; }
@@ -659,7 +697,7 @@ function syncHover(tt0, active) {
     if (P !== active) { P.tip.classList.remove("on"); continue; }
     const lb = METRICS[P.m].lowerBetter; at.sort((a,b) => lb ? a[1].v - b[1].v : b[1].v - a[1].v);
     P.tip.innerHTML = `<div class="t">${fmtTime(new Date(tt))}</div>` + at.map(([v,q]) =>
-      `<div class="r"><span><span class="dot" style="background:${color(v)}"></span>${LABEL[v]}</span><span class="v">${fmtVal(q.v, P.m)}${q.partial ? " *" : ""}</span></div>`).join("");
+      `<div class="r"><span><span class="dot" style="background:${color(v)}"></span>${LABEL[v]}</span><span class="v">${fmtVal(q.v, P.m)}${star(q)}</span></div>`).join("");
     P.tip.classList.add("on");
     const r = P.svg.getBoundingClientRect(), left = P.X(tt) * r.width / P.W, tw = P.tip.offsetWidth;
     P.tip.style.left = (left + 14 + tw > r.width ? Math.max(0, left - tw - 14) : left + 14) + "px"; P.tip.style.top = "6px";
@@ -677,15 +715,19 @@ function renderTable(tokens, clips) {
   const venues = VENUES.filter(v => state.venues.has(v) && per.some(sr => sr[v]));
   const grid = venues.map(v => per.map((sr, j) => {
     const sel = (sr[v] || []).filter(q => inRegime(cols[j][0], q.t));
-    return sel.length ? {v: statOf(sel.map(q => q.v), meta.lowerBetter), partial: sel.filter(q => q.partial).length * 2 > sel.length, n: sel.length} : null;
+    const fills = sel.map(q => q.fill).filter(f => f != null);
+    return sel.length ? {v: statOf(sel.map(q => q.v), meta.lowerBetter), partial: sel.filter(q => q.partial).length * 2 > sel.length, n: sel.length,
+      fill: fills.length ? fills.reduce((a, b) => a + b, 0) / fills.length : null} : null;
   }));
-  const neutral = m === "realized" && state.real === "mo60";
+  const neutral = (m === "realized" && state.real === "mo60") || (m === "orders" && state.ord === "avg10");
   const bestIdx = cols.map((_, j) => { let bi = -1; if (neutral) return -1; grid.forEach((row, i) => { const x = row[j];
-    if (x && (bi < 0 || (meta.lowerBetter ? x.v < grid[bi][j].v : x.v > grid[bi][j].v))) bi = i; }); return bi; });
+    if (!x) return; const b = bi < 0 ? null : grid[bi][j];
+    const better = !b || (x.partial !== b.partial ? !x.partial : (meta.lowerBetter ? x.v < b.v : x.v > b.v));
+    if (better) bi = i; }); return bi >= 0 && grid[bi][j].partial ? -1 : bi; });
   let h = `<table><thead><tr><th>${t("venue")}</th>${cols.map(([x,c]) => `<th>${x}${c == null ? "" : " " + fmtClip(c)}</th>`).join("")}</tr></thead><tbody>`;
   venues.forEach((v, i) => {
     h += `<tr><td><span class="dot" style="background:${color(v)};margin-right:8px"></span>${LABEL[v]}</td>` +
-      cols.map((_, j) => { const x = grid[i][j]; return `<td class="${bestIdx[j] === i ? "best-c" : ""}" title="n = ${x ? x.n : 0}">${x ? fmtVal(x.v, m) + (x.partial ? " *" : "") : "—"}</td>`; }).join("") + `</tr>`;
+      cols.map((_, j) => { const x = grid[i][j]; return `<td class="${bestIdx[j] === i ? "best-c" : ""}" title="n = ${x ? x.n : 0}">${x ? fmtVal(x.v, m) + star(x) : "—"}</td>`; }).join("") + `</tr>`;
   });
   wrap.innerHTML = h + `</tbody></table><p style="font-size:11.5px;color:var(--text-3);margin:10px 2px 0">${t("regimeNote")}</p>`;
 }
