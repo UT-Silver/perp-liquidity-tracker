@@ -109,6 +109,9 @@ def test_tracker_writes_history(tmp_path, monkeypatch):
     assert manifest["months"] == [month.name]
     assert manifest["tokens"][month.name] == ["BTC"]
     assert manifest["vol"][month.name] == ["BTC"]
+    assert manifest["orders"][month.name] == ["BTC"]
+    orows = list(csv.DictReader((month / "orders" / "BTC.csv").open()))
+    assert orows and int(orows[0]["top_orders"]) >= 1 and orows[0]["makers_10bps"] == ""
     vrows = list(csv.DictReader((month / "vol" / "BTC.csv").open()))
     assert len(vrows) == 2 and float(vrows[0]["rv_1h_bps"]) > 0
     latest = (tmp_path / "latest.md").read_text()
@@ -185,3 +188,17 @@ def test_effective_gap_shortens_in_high_vol(tmp_path, monkeypatch):
     gap, why = tracker.effective_gap(45, tmp_path, 80)            # 2x median: fast
     assert gap == 10 and why.startswith("high-vol")
     assert tracker.effective_gap(45, tmp_path / "none", 999)[0] == 45   # no history: normal
+
+
+def test_order_structure_counts_and_makers():
+    from perp_liquidity.analyzers.depth import compute_orders
+    ob = OrderBook(venue="x", token="T",
+                   bids=[OrderBookLevel(99.95, 1, n=1, owner="a"), OrderBookLevel(99.95, 2, n=1, owner="b"),
+                         OrderBookLevel(99.6, 3, n=1, owner="a")],
+                   asks=[OrderBookLevel(100.05, 5, n=7), OrderBookLevel(100.3, 5, n=3)])
+    res = {o.side: o for o in compute_orders(ob, (10, 50))}
+    assert res["bid"].top_orders == 2 and res["bid"].orders == {10: 2, 50: 3}
+    assert res["bid"].makers == {10: 2, 50: 2}            # 'a' counted once
+    assert res["ask"].top_orders == 7 and res["ask"].orders == {10: 7, 50: 10} and res["ask"].makers is None
+    plain = OrderBook(venue="y", token="T", bids=[OrderBookLevel(99, 1)], asks=[OrderBookLevel(101, 1)])
+    assert compute_orders(plain) == []                     # venue without counts: no rows

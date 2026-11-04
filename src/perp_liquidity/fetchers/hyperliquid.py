@@ -93,8 +93,8 @@ class HyperliquidClient(PerpDEXClient):
             # rather than a 4xx. Distinguish "no liquidity" from "not listed".
             raise TokenNotListed(self.VENUE, f"{token} not listed or no liquidity")
 
-        bids = [OrderBookLevel(price=float(lv["px"]), qty=float(lv["sz"])) for lv in levels[0]]
-        asks = [OrderBookLevel(price=float(lv["px"]), qty=float(lv["sz"])) for lv in levels[1]]
+        bids = [OrderBookLevel(price=float(lv["px"]), qty=float(lv["sz"]), n=int(lv.get("n") or 0) or None) for lv in levels[0]]
+        asks = [OrderBookLevel(price=float(lv["px"]), qty=float(lv["sz"]), n=int(lv.get("n") or 0) or None) for lv in levels[1]]
         bids.sort(key=lambda b: b.price, reverse=True)
         asks.sort(key=lambda a: a.price)
         return bids, asks

@@ -95,6 +95,8 @@ class OrderBookLevel:
 
     price: float
     qty: float  # Base asset quantity
+    n: int | None = None        # number of resting orders at this level, when the venue reports it
+    owner: str | None = None    # maker account, when each level is a single order (Lighter)
 
 
 @dataclass(frozen=True)

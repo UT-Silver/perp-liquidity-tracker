@@ -62,6 +62,15 @@ WS_URL = "wss://mainnet.zklighter.elliot.ai/stream"
 MARKETS_CACHE_TTL_SECONDS = 30.0
 
 
+def _owner(order: dict) -> str | None:
+    """Maker account of a resting order (field name varies across API versions)."""
+    for k in ("owner_account_index", "owner_account_id", "account_index", "owner"):
+        v = order.get(k)
+        if v not in (None, ""):
+            return str(v)
+    return None
+
+
 class LighterClient(PerpDEXClient):
     VENUE = "lighter"
     COVERAGE = {
@@ -178,6 +187,8 @@ class LighterClient(PerpDEXClient):
             OrderBookLevel(
                 price=float(level["price"]),
                 qty=float(level["remaining_base_amount"]),
+                n=1,
+                owner=_owner(level),
             )
             for level in bids_raw
         ]
@@ -185,6 +196,8 @@ class LighterClient(PerpDEXClient):
             OrderBookLevel(
                 price=float(level["price"]),
                 qty=float(level["remaining_base_amount"]),
+                n=1,
+                owner=_owner(level),
             )
             for level in asks_raw
         ]

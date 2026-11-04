@@ -21,7 +21,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from perp_liquidity.analyzers.depth import DEFAULT_BANDS_BPS, compute_depth
+from perp_liquidity.analyzers.depth import DEFAULT_BANDS_BPS, compute_depth, compute_orders
 from perp_liquidity.analyzers.volatility import fetch_vols
 from perp_liquidity.cli import run_analysis
 
@@ -42,6 +42,8 @@ ERROR_COLS = ["run_ts", "venue", "token", "kind", "message"]
 # Fees are not stored: the dashboard prices history from config/fees.json.
 DEPTH_COLS = ["run_ts", "venue", "side", "mid_price", "reach_bps"] + [f"depth_{b}bps_usd" for b in DEFAULT_BANDS_BPS]
 VOL_COLS = ["run_ts", "n_returns", "rv_1h_bps", "rv_ann_pct", "ret_1h_bps"]
+ORDER_COLS = (["run_ts", "venue", "side", "reach_bps", "top_orders"]
+              + [f"orders_{b}bps" for b in DEFAULT_BANDS_BPS] + [f"makers_{b}bps" for b in DEFAULT_BANDS_BPS])
 TOKEN_SLIP_COLS = ["run_ts", "venue", "side", "clip_usd", "mid_price", "spread_bps",
                    "slippage_bps", "partial", "filled_usd", "book_depth_usd"]
 
@@ -130,6 +132,7 @@ def main() -> int:
 
     slip_rows, fund_rows, oi_rows, err_rows = [], [], [], []
     depth_rows: dict[str, list[dict]] = {}
+    order_rows: dict[str, list[dict]] = {}
     for rep in reports:
         books = {ob.venue: ob for ob in rep.orderbooks}
         for ob in rep.orderbooks:
@@ -138,6 +141,11 @@ def main() -> int:
                        "mid_price": d.mid_price, "reach_bps": round(d.reach_bps, 2)}
                 row.update({f"depth_{b}bps_usd": round(v, 0) for b, v in d.depth_usd.items()})
                 depth_rows.setdefault(rep.token, []).append(row)
+            for o in compute_orders(ob):
+                row = {"run_ts": ts, "venue": o.venue, "side": o.side, "reach_bps": round(o.reach_bps, 2), "top_orders": o.top_orders}
+                row.update({f"orders_{b}bps": v for b, v in o.orders.items()})
+                row.update({f"makers_{b}bps": (o.makers or {}).get(b, "") for b in DEFAULT_BANDS_BPS})
+                order_rows.setdefault(rep.token, []).append(row)
         for s in rep.slippage:
             taker = fees.get(s.venue)
             ob = books.get(s.venue)
@@ -174,6 +182,8 @@ def main() -> int:
         _append(month_dir / "vol" / f"{tok}.csv", VOL_COLS, [{
             "run_ts": ts, "n_returns": v.n_returns, "rv_1h_bps": round(v.rv_1h_bps, 2),
             "rv_ann_pct": round(v.rv_ann_pct, 2), "ret_1h_bps": round(v.ret_1h_bps, 2)}])
+    for tok, rows in order_rows.items():
+        _append(month_dir / "orders" / f"{tok}.csv", ORDER_COLS, rows)
     for tok, rows in depth_rows.items():
         _append(month_dir / "depth" / f"{tok}.csv", DEPTH_COLS, rows)
     _append(month_dir / "funding.csv", FUNDING_COLS, fund_rows)
@@ -208,10 +218,12 @@ def write_manifest(data_dir: Path, updated: str) -> None:
                 vd = p / "vol"
                 if vd.is_dir():
                     vol[p.name] = sorted(f.stem for f in vd.glob("*.csv"))
+    orders = {p.name: sorted(f.stem for f in (p / "orders").glob("*.csv"))
+              for p in sorted(data_dir.iterdir()) if p.is_dir() and (p / "orders").is_dir()}
     tape = {p.name: sorted(f.stem for f in (p / "tape").glob("*.csv"))
             for p in sorted(data_dir.iterdir()) if p.is_dir() and (p / "tape").is_dir()}
     (data_dir / "manifest.json").write_text(json.dumps(
-        {"months": months, "tokens": tokens, "depth": depth, "vol": vol, "tape": tape, "updated": updated}) + "\n")
+        {"months": months, "tokens": tokens, "depth": depth, "vol": vol, "tape": tape, "orders": orders, "updated": updated}) + "\n")
 
 
 def write_latest(path: Path, ts: str, tokens, clips, slip_rows, err_rows) -> None:
