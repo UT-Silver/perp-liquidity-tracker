@@ -123,3 +123,4 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
 2026-11-04T06:00:35+00:00,paradex,ZEC,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/ZEC-USD-PERP/interactive?depth=50'
 For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T19:30:24+00:00,edgex,DOGE,error,[edgex] getMetaData request failed: 
