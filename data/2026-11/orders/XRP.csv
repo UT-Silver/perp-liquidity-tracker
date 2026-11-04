@@ -1,0 +1,5 @@
+run_ts,venue,side,reach_bps,top_orders,orders_10bps,orders_50bps,orders_100bps,makers_10bps,makers_50bps,makers_100bps
+2026-11-04T03:05:41+00:00,hyperliquid,bid,1575.4,2,43,182,303,,,
+2026-11-04T03:05:41+00:00,hyperliquid,ask,1553.74,8,98,266,387,,,
+2026-11-04T03:05:41+00:00,lighter,bid,5002.64,1,39,95,125,17,26,29
+2026-11-04T03:05:41+00:00,lighter,ask,19984.18,2,40,93,127,18,24,27
