@@ -1,4 +1,4 @@
-# Perp slippage snapshot — 2026-11-04T03:05:41+00:00
+# Perp slippage snapshot — 2026-11-04T03:21:08+00:00
 
 Total cost = slippage vs mid + base-tier taker fee, in bps, averaged over buy & sell. `*` = book snapshot too shallow to fill the clip.
 
@@ -6,119 +6,130 @@ Total cost = slippage vs mid + base-tier taker fee, in bps, averaged over buy & 
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 0.01 | 4.56 | 4.68 | 4.99 | 5.43 | 9.08 | 13.68 |
-| edgex | 0.13 | 4.57 | 4.57 | 4.61 | 4.77 | 5.95 | 8.17 |
-| extended | 0.13 | 3.02 | 3.18 | 3.57 | 4.00 | 11.25 | 74.39 |
-| grvt | 0.01 | 4.51 | 4.51 | 4.77 | 5.22* | 5.28* | 5.28* |
-| hyperliquid | 0.26 | 4.77 | 4.88 | 5.17 | 5.40 | 6.81 | 7.84 |
-| lighter | 0.47 | 3.08 | 3.28 | 3.96 | 4.45 | 7.58 | 10.55 |
-| paradex | 43.71 | 143.46 | 771.66* | 1238.44* | 1462.13* | 1462.13* | 1462.13* |
+| aster | 0.01 | 4.01 | 4.01 | 4.28 | 4.72 | 7.93 | 12.05 |
+| edgex | 0.96 | 4.98 | 5.00 | 5.10 | 5.24 | 6.50 | 8.67 |
+| extended | 0.13 | 2.57 | 2.57 | 2.68 | 3.12 | 9.64 | 45.34 |
+| grvt | 0.01 | 4.51 | 4.51 | 4.66 | 5.12 | 5.31* | 5.31* |
+| hyperliquid | 0.13 | 4.57 | 4.57 | 4.66 | 4.81 | 7.24 | 8.75 |
+| lighter | 0.75 | 3.17 | 3.27 | 3.51 | 3.74 | 6.39 | 9.09 |
 
 ## ETH
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 0.04 | 4.31 | 4.37 | 4.41 | 4.60 | 7.12 | 13.28 |
-| edgex | 0.31 | 5.15 | 5.19 | 5.20 | 5.30 | 7.39 | 12.06 |
-| extended | 0.45 | 3.17 | 3.35 | 4.97 | 5.83 | 13.62 | 160.37* |
-| grvt | 0.09 | 4.58 | 5.06 | 5.29* | 5.29* | 5.29* | 5.29* |
-| hyperliquid | 0.45 | 4.72 | 4.88 | 5.53 | 5.94 | 7.75 | 9.09 |
-| lighter | 0.04 | 3.27 | 3.81 | 4.00 | 4.34 | 8.05 | 13.00 |
-| paradex | 73.86 | 150.69 | 397.84* | 397.84* | 397.84* | 397.84* | 397.84* |
+| aster | 0.04 | 4.13 | 4.19 | 4.53 | 4.95 | 8.77 | 17.90 |
+| edgex | 0.31 | 5.27 | 5.32 | 5.38 | 5.51 | 7.61 | 12.20 |
+| extended | 0.45 | 2.72 | 2.81 | 4.29 | 5.11 | 12.50 | 160.03* |
+| grvt | 0.04 | 4.54 | 5.02 | 5.54* | 5.54* | 5.54* | 5.54* |
+| hyperliquid | 0.45 | 4.87 | 4.95 | 5.47 | 5.71 | 7.42 | 9.49 |
+| lighter | 0.67 | 3.14 | 3.46 | 4.05 | 4.47 | 8.06 | 13.57 |
 
 ## SOL
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 1.11 | 4.83 | 5.08 | 6.41 | 8.07 | 31.13 | 96.65* |
-| edgex | 6.65 | 7.82 | 7.82 | 7.96 | 8.27 | 13.19 | 29.81 |
-| extended | 1.11 | 4.15 | 4.48 | 6.05 | 7.82 | 116.84* | 116.84* |
-| grvt | 1.11 | 5.05 | 5.49 | 7.35 | 9.60* | 9.60* | 9.60* |
-| hyperliquid | 0.11 | 4.66 | 5.98 | 7.19 | 8.08 | 13.44 | 24.37 |
-| lighter | 0.55 | 3.61 | 4.88 | 7.64 | 9.81 | 24.33 | 44.11 |
-| paradex | 298.10 | 1104.70* | 5428.98* | 5428.98* | 5428.98* | 5428.98* | 5428.98* |
+| aster | 1.10 | 5.16 | 5.61 | 6.84 | 8.60 | 32.86 | 98.22* |
+| edgex | 4.42 | 6.71 | 6.71 | 6.71 | 6.89 | 11.28 | 25.78 |
+| extended | 1.10 | 3.05 | 3.05 | 4.83 | 6.48 | 104.32* | 104.32* |
+| grvt | 1.10 | 5.05 | 5.52 | 7.08 | 9.97* | 10.29* | 10.29* |
+| hyperliquid | 0.11 | 4.62 | 5.39 | 7.05 | 8.31 | 14.31 | 24.07 |
+| lighter | 0.11 | 3.87 | 4.64 | 7.69 | 9.63 | 22.26 | 42.46 |
 
 ## HYPE
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 0.12 | 4.49 | 5.75 | 11.83 | 22.53 | 69.02* | 69.02* |
-| edgex | 2.58 | 5.79 | 6.02 | 64.50 | 152.01 | 228.62* | 228.62* |
-| extended | 0.12 | 4.74 | 6.35 | 15.17 | 24.94 | 181.82* | 181.82* |
-| grvt | 0.12 | 5.17 | 5.77 | 5.89* | 5.89* | 5.89* | 5.89* |
-| hyperliquid | 1.10 | 5.22 | 7.00 | 11.25 | 14.52 | 38.96 | 61.33 |
-| lighter | 2.08 | 4.18 | 5.80 | 10.49 | 15.64 | 52.72 | 100.53* |
-| paradex | 444.10 | 852.99* | 1125.48* | 1125.48* | 1125.48* | 1125.48* | 1125.48* |
+| aster | 1.22 | 4.71 | 5.88 | 12.72 | 23.06 | 68.58* | 68.58* |
+| edgex | 1.95 | 5.50 | 5.98 | 64.68 | 147.30 | 224.78* | 224.78* |
+| extended | 0.12 | 3.26 | 4.69 | 12.73 | 21.62 | 178.19* | 178.19* |
+| grvt | 0.24 | 4.62 | 5.33 | 5.76* | 5.76* | 5.76* | 5.76* |
+| hyperliquid | 0.37 | 5.49 | 6.39 | 9.89 | 12.27 | 32.60 | 56.30 |
+| lighter | 1.51 | 3.83 | 6.00 | 10.04 | 14.37 | 50.63 | 100.74* |
 
 ## DOGE
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 1.38 | 5.17 | 5.64 | 8.90 | 14.77 | 282.10* | 282.10* |
-| edgex | 6.90 | 7.95 | 8.50 | 12.94 | 19.29 | 44.62* | 44.62* |
-| extended | 1.38 | 5.12 | 5.92 | 10.49 | 16.45 | 26.98* | 26.98* |
-| grvt | 1.38 | 6.57 | 8.52 | 14.40* | 15.47* | 15.47* | 15.47* |
-| hyperliquid | 0.96 | 5.90 | 8.01 | 13.77 | 20.13 | 62.24 | 97.18* |
-| lighter | 2.48 | 6.46 | 11.62 | 22.43 | 31.85 | 62.71* | 62.71* |
-| paradex | 1697.91 | 4209.35* | 4209.35* | 4209.35* | 4209.35* | 4209.35* | 4209.35* |
+| aster | 1.37 | 5.10 | 5.79 | 9.50 | 13.63 | 1238.33* | 1238.33* |
+| edgex | 5.49 | 7.25 | 7.76 | 12.07 | 18.69 | 42.77* | 42.77* |
+| extended | 1.37 | 5.69 | 6.79 | 10.40 | 15.69 | 25.94* | 25.94* |
+| grvt | 4.11 | 6.58 | 8.76 | 14.79 | 15.48* | 15.48* | 15.48* |
+| hyperliquid | 1.78 | 6.17 | 7.12 | 12.14 | 18.50 | 61.79 | 108.05* |
+| lighter | 3.43 | 6.88 | 12.20 | 22.04 | 30.32 | 59.80* | 59.80* |
 
 ## XRP
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 0.80 | 4.40 | 5.86 | 10.32 | 17.74 | 1445.76* | 1445.76* |
-| edgex | 4.02 | 6.51 | 6.69 | 8.40 | 11.26 | 37.11* | 37.11* |
-| extended | 0.80 | 4.27 | 5.75 | 14.67 | 57.50* | 57.50* | 57.50* |
-| grvt | 0.80 | 5.47 | 6.79 | 9.02* | 9.02* | 9.02* | 9.02* |
-| hyperliquid | 2.41 | 5.74 | 7.88 | 9.58 | 11.90 | 26.52 | 40.18 |
-| lighter | 1.75 | 4.31 | 5.11 | 12.07 | 16.97 | 37.42 | 62.71 |
-| paradex | 405.55 | 318.55 | 1880.28* | 1880.28* | 1880.28* | 1880.28* | 1880.28* |
+| aster | 0.80 | 4.40 | 5.02 | 9.00 | 16.36 | 1228.94* | 1228.94* |
+| edgex | 2.40 | 5.70 | 5.76 | 7.33 | 9.92 | 43.08* | 43.08* |
+| extended | 0.80 | 2.90 | 5.55 | 14.89 | 59.20* | 59.20* | 59.20* |
+| grvt | 2.39 | 5.70 | 6.41 | 9.05* | 9.05* | 9.05* | 9.05* |
+| hyperliquid | 1.60 | 5.74 | 7.25 | 10.09 | 12.01 | 26.26 | 39.41 |
+| lighter | 1.89 | 4.05 | 5.79 | 11.44 | 15.16 | 34.00 | 57.83 |
 
 ## PUMP
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 4.84 | 10.05 | 16.01 | 40.53 | 225.40* | 225.40* | 225.40* |
-| edgex | 4.85 | 19.66 | 33.01 | 75.45* | 81.89* | 81.89* | 81.89* |
-| extended | 2.42 | 4.33 | 10.14 | 1335.67* | 6841.60* | 11833.88* | 11833.88* |
-| grvt | 2.42 | 8.75 | 17.12 | 18.46* | 18.46* | 18.46* | 18.46* |
-| hyperliquid | 2.42 | 9.06 | 14.69 | 26.09 | 42.48 | 161.77 | 221.06* |
-| lighter | 2.42 | 6.88 | 13.67 | 39.89 | 69.43 | 113.11* | 113.11* |
-| paradex | 4921.64 | 2440.79* | 2440.79* | 2440.79* | 2440.79* | 2440.79* | 2440.79* |
+| aster | 4.86 | 10.06 | 15.86 | 38.47 | 222.69* | 222.69* | 222.69* |
+| edgex | 24.35 | 17.76 | 20.98 | 41.64 | 68.75* | 68.75* | 68.75* |
+| extended | 2.43 | 4.72 | 10.55 | 1576.77* | 7383.06* | 12377.45* | 12377.45* |
+| grvt | 2.43 | 8.11 | 17.00* | 18.02* | 18.02* | 18.02* | 18.02* |
+| hyperliquid | 2.43 | 7.09 | 13.96 | 24.12 | 35.74 | 175.28 | 221.67* |
+| lighter | 2.43 | 6.04 | 10.44 | 32.58 | 61.73 | 106.74* | 106.74* |
 
 ## SUI
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 8.12 | 11.27 | 19.37 | 84.61 | 351.89* | 351.89* | 351.89* |
-| edgex | 4.65 | 6.82 | 9.29 | 55.29 | 97.09* | 97.09* | 97.09* |
-| extended | 1.16 | 3.63 | 6.12 | 15.69 | 35.48* | 35.48* | 35.48* |
-| grvt | 1.16 | 7.41 | 10.53 | 12.22* | 12.22* | 12.22* | 12.22* |
-| hyperliquid | 1.28 | 8.68 | 12.70 | 28.44 | 42.39 | 120.57* | 120.57* |
-| lighter | 1.74 | 7.11 | 14.80 | 44.95 | 98.04* | 104.72* | 104.72* |
-| paradex | 3459.09 | 5317.90* | 5317.90* | 5317.90* | 5317.90* | 5317.90* | 5317.90* |
+| aster | 2.31 | 8.86 | 14.91 | 46.28 | 341.69* | 341.69* | 341.69* |
+| edgex | 4.63 | 6.81 | 9.90 | 61.78 | 97.86* | 97.86* | 97.86* |
+| extended | 1.16 | 3.62 | 6.09 | 15.52 | 36.02* | 36.02* | 36.02* |
+| grvt | 2.31 | 6.22 | 8.79 | 11.88* | 11.88* | 11.88* | 11.88* |
+| hyperliquid | 1.27 | 7.47 | 11.63 | 27.14 | 43.30 | 121.54* | 121.54* |
+| lighter | 2.31 | 6.26 | 11.05 | 37.11 | 83.14 | 101.90* | 101.90* |
 
 ## ENA
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 1.78 | 9.20 | 22.29 | 58.35 | 998.08* | 998.08* | 998.08* |
-| edgex | 17.85 | 13.42 | 15.32 | 32.40 | 54.61 | 98.07* | 98.07* |
-| extended | 4.16 | 7.00 | 13.15 | 57.10 | 95.80* | 95.80* | 95.80* |
-| grvt | 5.94 | 8.37 | 10.69* | 10.69* | 10.69* | 10.69* | 10.69* |
-| hyperliquid | 3.56 | 9.12 | 16.90 | 37.60 | 47.99 | 183.21 | 260.19* |
-| lighter | 1.19 | 9.59 | 18.76 | 46.93 | 87.08 | 739.75* | 739.75* |
-| paradex | 2217.82 | 1865.54* | 1865.54* | 1865.54* | 1865.54* | 1865.54* | 1865.54* |
+| aster | 2.97 | 10.80 | 22.65 | 57.11 | 994.74* | 994.74* | 994.74* |
+| edgex | 17.87 | 13.43 | 15.33 | 32.44 | 55.92 | 107.34* | 107.34* |
+| extended | 0.60 | 6.87 | 12.98 | 51.93 | 91.51* | 91.51* | 91.51* |
+| grvt | 2.38 | 7.24 | 9.17* | 9.17* | 9.17* | 9.17* | 9.17* |
+| hyperliquid | 5.35 | 9.42 | 17.54 | 40.28 | 50.07 | 174.47 | 254.54* |
+| lighter | 2.38 | 6.82 | 13.50 | 41.28 | 78.16 | 727.19* | 727.19* |
 
 ## ZEC
 
 | venue | spread bps | $10,000 | $100,000 | $500,000 | $1,000,000 | $5,000,000 | $10,000,000 |
 |---|---|---|---|---|---|---|---|
-| aster | 3.17 | 6.49 | 10.17 | 29.80 | 44.58 | 487.95* | 487.95* |
-| edgex | 4.64 | 6.82 | 7.73 | 215.40* | 215.40* | 215.40* | 215.40* |
-| extended | 1.35 | 5.52 | 9.07 | 25.89 | 123.22 | 729.26* | 729.26* |
-| grvt | 47.60 | 57.61 | 719.43* | 881.68* | 881.68* | 881.68* | 881.68* |
-| hyperliquid | 1.71 | 5.40 | 8.33 | 12.47 | 15.37 | 36.22 | 51.04 |
-| lighter | 1.09 | 3.94 | 5.83 | 12.38 | 18.86 | 56.71 | 159.18* |
-| paradex | 725.43 | 413.09 | 1644.38* | 1644.38* | 1644.38* | 1644.38* | 1644.38* |
+| aster | 2.14 | 5.49 | 9.27 | 24.00 | 37.17 | 467.32* | 467.32* |
+| edgex | 0.94 | 4.97 | 5.73 | 195.16* | 195.16* | 195.16* | 195.16* |
+| extended | 0.23 | 4.36 | 9.36 | 25.04 | 128.61 | 770.44* | 770.44* |
+| grvt | 2.31 | 9.75 | 67.13* | 116.41* | 116.41* | 116.41* | 116.41* |
+| hyperliquid | 1.71 | 6.04 | 7.58 | 12.05 | 14.90 | 39.75 | 54.49 |
+| lighter | 1.51 | 3.95 | 5.85 | 13.22 | 19.67 | 56.77 | 159.21* |
 
+## Errors
+- paradex / BTC: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/BTC-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / ETH: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/ETH-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / SOL: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/SOL-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / HYPE: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/HYPE-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / DOGE: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/DOGE-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / XRP: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/XRP-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / PUMP: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/PUMP-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / SUI: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/SUI-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / ENA: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/ENA-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
+- paradex / ZEC: [paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/ZEC-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
