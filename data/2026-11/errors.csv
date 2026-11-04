@@ -43,3 +43,23 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
 2026-11-04T03:45:17+00:00,paradex,ZEC,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/ZEC-USD-PERP/interactive?depth=50'
 For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,BTC,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/BTC-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,ETH,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/ETH-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,SOL,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/SOL-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,HYPE,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/HYPE-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,DOGE,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/DOGE-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,XRP,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/XRP-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,PUMP,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/PUMP-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,SUI,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/SUI-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,ENA,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/ENA-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
+2026-11-04T04:00:26+00:00,paradex,ZEC,error,"[paradex] orderbook HTTP error: Server error '503 Service Temporarily Unavailable' for url 'https://api.prod.paradex.trade/v1/orderbook/ZEC-USD-PERP/interactive?depth=50'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503"
