@@ -205,6 +205,7 @@ footer b { color: var(--text-2); font-weight: 600; }
         <div class="ctl"><label data-i18n="lblRange"></label><div class="seg" id="range"></div></div>
         <div class="ctl"><label data-i18n="lblScale"></label><div class="seg" id="scale"></div></div>
         <div class="ctl"><label data-i18n="lblShare"></label><div class="seg" id="share"></div></div>
+        <div class="ctl"><label data-i18n="lblSmooth"></label><div class="seg" id="smooth"></div></div>
         <div class="ctl"><label data-i18n="lblStat"></label><div class="seg" id="stat"></div></div>
         <div class="ctl"><label data-i18n="lblRegime"></label><div class="seg" id="regime"></div></div>
         <div class="ctl"><label data-i18n="lblVenues"></label><div class="chips" id="venues"></div></div>
@@ -237,6 +238,8 @@ const I18N = {
     m_ord: "挂单结构", d_ord: "仅 Hyperliquid、Lighter 提供", lblOrd: "挂单结构口径",
     od_top: "最优价订单数", od_o10: "±10bps 订单数", od_avg10: "±10bps 平均单笔", od_mk10: "±10bps 挂单账户",
     ordSoon: "挂单结构从 2026-11-04 起记录（仅 Hyperliquid、Lighter 的接口提供订单数；挂单账户数仅 Lighter 提供）",
+    lblSmooth: "平滑", sm_raw: "原始", sm_auto: "自动", rawLbl: "原始",
+    smoothNote: h => `曲线为 ${h} 小时滚动中位数（只看过去），淡色点为原始快照`, smoothShort: h => `${h}h 平滑`,
     filled: p => `成交 ${p}%`, allPartial: "各家盘口都接不住",
     lblBuckets: "成交规模", realSoon: "实际成交数据来自采集服务器，部署后每小时更新一次（目前覆盖 Hyperliquid 和 Lighter）",
     d_total: "滑点 + taker 费，bps", d_slip: "不含手续费，bps", d_spread: "bps", d_depth: "mid 附近挂单金额",
@@ -260,6 +263,7 @@ const I18N = {
       <b>最高档</b>：各家公布的最低 taker（最高成交量档 + 最大代币折扣），属做市商量级，是费率下限：Hyperliquid 1.44 · Lighter 1.96 · Aster 1.6 · edgeX 2.4（Aster、edgeX 未经官方核实）。<br>
       <b>盘口深度</b> = mid 上下 ±10 bps / ±50 bps / ±1% 以内的挂单金额（买入看卖盘，卖出看买盘），各家同口径。
       <b>空心点</b>：滑点类指标表示盘口不够成交整笔单；深度指标表示抓到的盘口没覆盖到该范围。两种情况数值都偏乐观（滑点偏低 / 深度是下限）。<br>
+      <b>平滑</b>：曲线是滚动中位数，每个点只用它之前的数据（最新的点可信，但会滞后约半个窗口）。同一小时内的多次快照先合并成一个值，避免高波动时段因为采样更密而权重更大；盘口被吃穿的快照不参与平滑，窗口内多数被吃穿时该段画成虚线。"自动"窗口：24h 视图 3 小时、7d 视图 12 小时、30d 及全部 24 小时。淡色点是原始快照，超出纵轴的尖峰钉在图顶显示为小三角。鼠标靠近某家的曲线（或悬停在交易所按钮上）会显示它 25–75 分位的波动带；只选一家时始终显示。超过 3 小时无数据时曲线断开。右上角角标和底部统计表不受平滑影响。<br>
       <b>挂单结构</b>：每次快照统计最优价的订单数、mid ±10 bps 以内的订单数、平均单笔金额（该范围挂单金额 ÷ 订单数），以及挂单账户数（仅 Lighter 提供）。订单越多、来自越多账户，说明流动性越分散、越不依赖少数做市商。成交比例：大单把盘口吃穿时，标注实际成交了多少。<br>
       <b>实际成交</b>：实时采集的公开成交，按吃单订单合并后计算。成交成本 = 成交均价相对成交前 mid 的偏离（含半个价差，不含手续费）；60 秒价格冲击 = 60 秒后 mid 相对成交前 mid 的移动；60 秒成交后走势 = 60 秒后 mid 相对成交价的移动，正值表示价格继续朝吃单方向走（吃单方信息更多）。空心点 = 该小时样本少于 5 笔。<br>
       数据：<a href="https://github.com/UT-Silver/perp-liquidity-tracker/tree/main/data">github.com/UT-Silver/perp-liquidity-tracker</a>`,
@@ -276,6 +280,8 @@ const I18N = {
     m_ord: "Book structure", d_ord: "Hyperliquid and Lighter only", lblOrd: "Structure measure",
     od_top: "Orders at best", od_o10: "Orders ±10bps", od_avg10: "Avg order ±10bps", od_mk10: "Makers ±10bps",
     ordSoon: "Book structure is recorded from 2026-11-04 (only Hyperliquid and Lighter expose order counts; maker accounts only on Lighter)",
+    lblSmooth: "Smoothing", sm_raw: "Raw", sm_auto: "Auto", rawLbl: "raw",
+    smoothNote: h => `lines are ${h}h trailing rolling medians; faint dots are raw snapshots`, smoothShort: h => `${h}h smoothed`,
     filled: p => `${p}% filled`, allPartial: "no venue fills it",
     lblBuckets: "Fill size", realSoon: "Realized-fill data comes from the collector server and updates hourly once deployed (Hyperliquid and Lighter for now)",
     d_total: "slippage + taker fee, bps", d_slip: "excl. fees, bps", d_spread: "bps", d_depth: "resting notional near mid",
@@ -299,6 +305,7 @@ const I18N = {
       <b>Top tier</b>: best published taker (top volume tier + max token discount), market-maker scale, i.e. a floor: Hyperliquid 1.44 · Lighter 1.96 · Aster 1.6 · edgeX 2.4 (Aster, edgeX unverified).<br>
       <b>Depth</b> = resting notional within ±10 bps / ±50 bps / ±1% of mid (buy side = asks, sell side = bids), same definition on every venue.
       <b>Hollow points</b>: for cost metrics, the book was too thin to fill the whole order; for depth, the fetched book didn't reach the band. Both are optimistic (cost too low / depth a lower bound).<br>
+      <b>Smoothing</b>: lines are trailing rolling medians (each point uses only earlier data, so the latest point is trustworthy but lags about half a window). Snapshots within an hour are first merged so densely sampled high-vol hours don't get extra weight; partial fills are excluded, and a window that is mostly partial is drawn dashed. Auto window: 3 h for the 24h view, 12 h for 7d, 24 h for 30d / all. Faint dots are raw snapshots; spikes above the axis are pinned to the top as small triangles. Hover near a venue's line (or its venue button) to see its 25–75th percentile band; with one venue selected the band is always shown. Lines break across gaps over 3 h. Badges and the statistics table are not affected by smoothing.<br>
       <b>Book structure</b>: per snapshot, orders at the best price, orders within ±10 bps of mid, average order size (band notional ÷ orders), and distinct maker accounts (Lighter only). More orders from more accounts = liquidity less dependent on a few market makers. Fill %: when a large order exhausts the fetched book, how much of it actually filled.<br>
       <b>Realized</b>: live public fills merged into taker orders. Fill cost = VWAP vs pre-trade mid (incl. half spread, excl. fees); 60s impact = mid 60 s later vs pre-trade mid; 60s markout = mid 60 s later vs fill price, positive when price kept moving the taker's way (more informed takers). Hollow = fewer than 5 fills that hour.<br>
       Data: <a href="https://github.com/UT-Silver/perp-liquidity-tracker/tree/main/data">github.com/UT-Silver/perp-liquidity-tracker</a>`,
@@ -332,7 +339,7 @@ const browserLang = (navigator.language || "zh").toLowerCase().startsWith("zh") 
 const state = {
   lang: store.get("pdt.lang", browserLang), theme: store.get("pdt.theme", "auto"),
   tokens: new Set(["BTC","ETH","SOL","HYPE"]), clips: new Set([10000, 100000, 500000, 1000000]),
-  metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base", band: 50, stat: "med", regime: "all", real: "cost", ord: "o10", buckets: new Set(["10k-100k", "100k-1M", ">=1M"]),
+  metric: "total_cost_bps", side: "avg", range: "7d", scale: "lin", share: "own", fee: "base", band: 50, stat: "med", regime: "all", smooth: "auto", real: "cost", ord: "o10", buckets: new Set(["10k-100k", "100k-1M", ">=1M"]),
   venues: new Set(["hyperliquid","lighter","aster","edgex"]),
 };
 let ROWS = [], DROWS = [], ALL_TOKENS = [], ALL_CLIPS = [], FEES = {}, MANIFEST = null;
@@ -475,6 +482,49 @@ function seriesFor(token, clip) {
   return out;
 }
 
+/* ================= smoothing ================= */
+const SMOOTH_AUTO = {"24h": 3, "7d": 12, "30d": 24, "all": 24};
+const GAP_H = 3;   // no line across more than 3 h without data
+const smoothHours = () => state.smooth === "raw" ? 0 : state.smooth === "auto" ? SMOOTH_AUTO[state.range] : +state.smooth;
+// Trailing rolling median. Snapshots are first collapsed to one value per hour, so hours that were
+// sampled more often (adaptive sampling in high vol) do not get more weight. Partial fills (book
+// exhausted, value too low) are left out; if a window is mostly partial, the point is flagged.
+function smoothSeries(pts, Wh) {
+  const hours = new Map();
+  for (const q of pts) {
+    const h = Math.floor(q.t / 3600e3), b = hours.get(h) || {t: 0, ok: [], part: [], last: null};
+    (q.partial ? b.part : b.ok).push(q.v);
+    if (!b.last || q.t >= b.last.t) b.last = q;
+    b.t = Math.max(b.t, q.t); hours.set(h, b);
+  }
+  const hs = [...hours.keys()].sort((a, b) => a - b), out = [];
+  for (let i = 0; i < hs.length; i++) {
+    const h = hs[i], ok = [], part = []; let nOk = 0, nPart = 0;
+    for (let j = i; j >= 0 && hs[j] > h - Wh; j--) {
+      const b = hours.get(hs[j]);
+      if (b.ok.length) ok.push(quantile(b.ok, .5));
+      if (b.part.length) part.push(quantile(b.part, .5));
+      nOk += b.ok.length; nPart += b.part.length;
+    }
+    const base = ok.length ? ok : part, b = hours.get(h);
+    out.push({t: b.t, v: quantile(base, .5), lo: quantile(base, .25), hi: quantile(base, .75),
+              partial: nPart > nOk, gap: i > 0 && h - hs[i-1] > GAP_H,
+              raw: b.last.v, rawPartial: b.last.partial, rawFill: b.last.fill});
+  }
+  return out;
+}
+const asDisplay = p => p.map((q, i) => ({...q, gap: i > 0 && q.t - p[i-1].t > GAP_H * 3600e3, raw: q.v, rawPartial: q.partial, rawFill: q.fill}));
+const displaySeries = series => { const Wh = smoothHours(), o = {}; for (const v in series) o[v] = Wh ? smoothSeries(series[v], Wh) : asDisplay(series[v]); return o; };
+// faint raw dots: at most ~150 per venue per chart (bucket medians beyond that)
+function thinRaw(p) {
+  if (p.length <= 200) return p;
+  const span = (p[p.length-1].t - p[0].t) / 3600e3, bh = Math.max(1, Math.ceil(span / 150)), m = new Map();
+  for (const q of p) { const k = Math.floor(q.t / (bh * 3600e3)); const b = m.get(k) || []; b.push(q); m.set(k, b); }
+  return [...m.values()].map(b => ({t: b[b.length-1].t, v: quantile(b.map(q => q.v), .5), partial: b.filter(q => q.partial).length * 2 > b.length}));
+}
+let FOCUS = null;
+function setFocus(v) { if (v === FOCUS) return; FOCUS = v; for (const P of PANELS) P.applyFocus(); }
+
 /* ================= controls ================= */
 function seg(id, items, key, opts = {}) {
   const el = document.getElementById(id); el.innerHTML = "";
@@ -502,6 +552,7 @@ function chips(id, items, set, opts = {}) {
   for (const [val, html] of items) {
     const b = document.createElement("button"); b.type = "button"; b.className = "chip" + (opts.cls ? " " + opts.cls : "");
     b.innerHTML = html; b.setAttribute("aria-pressed", String(set.has(val)));
+    if (opts.onHover) { b.onmouseenter = () => opts.onHover(val); b.onmouseleave = () => opts.onHover(null); }
     b.onclick = async () => {
       if (set.has(val)) { if (set.size > 1) set.delete(val); else return; } else set.add(val);
       if (set === state.tokens) await ensureLoaded();
@@ -544,10 +595,11 @@ function buildControls() {
   seg("range", Object.keys(RANGES).map(k => [k, k === "all" ? t("r_all") : k]), "range");
   seg("scale", [["lin", t("sc_lin")],["log", t("sc_log")]], "scale");
   seg("share", [["own", t("sh_own")],["token", t("sh_token")]], "share");
+  seg("smooth", [["raw", t("sm_raw")],["auto", t("sm_auto")],["6","6h"],["12","12h"],["24","24h"]], "smooth");
   seg("stat", [["med", t("st_med")],["tail", t("st_tail")]], "stat");
   seg("regime", [["all", t("rg_all")],["calm", t("rg_calm")],["high", t("rg_high")]], "regime");
   const present = VENUES.filter(v => ROWS.some(r => r.venue === v));
-  chips("venues", present.map(v => [v, `<span class="dot" style="background:${color(v)}"></span>${LABEL[v]}`]), state.venues, {cls:"venue"});
+  chips("venues", present.map(v => [v, `<span class="dot" style="background:${color(v)}"></span>${LABEL[v]}`]), state.venues, {cls:"venue", onHover: v => setFocus(v)});
 }
 
 /* ================= render ================= */
@@ -592,17 +644,18 @@ function render() {
   const extra = ` (${mDesc(state.metric)}, ${t("s_" + state.side)}` +
     (state.metric === "total_cost_bps" ? `, ${t("fee_" + state.fee)}` : state.metric === "depth" ? `, mid ${BAND_TXT[state.band]}` : state.metric === "realized" ? `, ${t("rl_" + state.real)}` : state.metric === "orders" ? `, ${t("od_" + state.ord)}` : "") + ")";
   const sumEl = document.getElementById("summary");
-  sumEl.textContent = t("summary")(mLabel(state.metric), state.lang === "zh" ? extra.replace(" (", "（").replace(/\)$/, "）").replaceAll(", ", "，") : extra, tokens.length, meta.sizeFree ? 0 : clips.length);
+  sumEl.textContent = t("summary")(mLabel(state.metric), state.lang === "zh" ? extra.replace(" (", "（").replace(/\)$/, "）").replaceAll(", ", "，") : extra, tokens.length, meta.sizeFree ? 0 : clips.length)
+    + (smoothHours() ? " · " + t("smoothNote")(smoothHours()) : "");
 
   { const SRC = srcRows(); if (SRC.length) computeRegimes(Math.max(...SRC.map(r => r.t)) - RANGES[state.range] * 3600e3); }
   { const ready = tokens.some(x => REGIME[x] && REGIME[x].size), n = Math.max(0, ...tokens.map(x => REGIME_N[x] || 0));
     sumEl.insertAdjacentHTML("beforeend", ready ? `<span class="vb"></span>${t("volLegend")}` : ` · ${t("volWait")(n, MIN_REGIME_N)}`); }
   const host = document.getElementById("panels"), keepY = window.scrollY;
-  host.innerHTML = ""; PANELS.length = 0;
+  host.innerHTML = ""; PANELS.length = 0; FOCUS = null;
   if (!srcRows().length) { host.innerHTML = `<div class="empty">${state.metric === "depth" ? t("depthSoon") : state.metric === "realized" ? t("realSoon") : state.metric === "orders" ? t("ordSoon") : t("noData")}</div>`; renderTable([], []); return; }
   for (const token of tokens) {
     const data = clips.map(c => ({clip: c, series: seriesFor(token, c)}));
-    const shared = state.share === "token" ? data.flatMap(d => Object.values(d.series).flat().map(p => p.v)) : null;
+    const shared = state.share === "token" ? data.flatMap(d => Object.values(displaySeries(d.series)).flat().map(p => p.v)) : null;
     const row = document.createElement("section"); row.className = "token-row";
     row.innerHTML = `<div class="token-head"><h2>${token}</h2><span>${meta.sizeFree ? mLabel(state.metric) : clips.map(fmtClip).join(" · ")}</span></div>`;
     const grid = document.createElement("div"); grid.className = "grid"; grid.style.setProperty("--cols", String(clips.length <= 4 ? clips.length : 3));
@@ -639,12 +692,14 @@ function panel(token, clip, series, sharedValues) {
 }
 
 function drawChart(chart, token, clip, series, sharedValues, pts) {
-  const m = state.metric;
+  const m = state.metric, Wh = smoothHours();
   const W = Math.max(260, Math.round(chart.clientWidth)), H = Math.round(Math.min(260, Math.max(170, W * 0.5)));
-  const M = {l: 46, r: 10, t: 10, b: 24};
+  const M = {l: 46, r: 10, t: 10, b: 24}, yTop = M.t, yBot = H - M.b;
+  const disp = displaySeries(series), dpts = Object.values(disp).flat();
   const tMin = Math.min(...pts.map(p => p.t)), tMax = Math.max(...pts.map(p => p.t)), spanH = (tMax - tMin) / 3600e3;
-  const {ticks, Y} = yScale(sharedValues || pts.map(p => p.v), H, M.t, M.b);
+  const {ticks, Y} = yScale(sharedValues || dpts.map(p => p.v), H, M.t, M.b);
   const X = tt => M.l + (tMax === tMin ? (W-M.l-M.r)/2 : (tt - tMin) / (tMax - tMin) * (W - M.l - M.r));
+  const f1 = x => x.toFixed(1);
   let s = `<svg class="c" viewBox="0 0 ${W} ${H}" role="img" aria-label="${token} ${clip ? fmtClip(clip) : ""} ${mLabel(m)}"><g class="ax">`;
   for (const v of ticks) s += `<line class="gl" x1="${M.l}" x2="${W-M.r}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${M.l-8}" y="${Y(v)+3.5}" text-anchor="end">${fmtVal(v, m)}</text>`;
   const nx = Math.min(W < 380 ? 3 : 4, new Set(pts.map(p => p.t)).size);
@@ -653,36 +708,84 @@ function drawChart(chart, token, clip, series, sharedValues, pts) {
     s += `<text x="${X(tt)}" y="${H-6}" text-anchor="${nx > 1 && i === 0 ? "start" : nx > 1 && i === nx-1 ? "end" : "middle"}">${fmtAxisTime(new Date(tt), spanH)}</text>`;
   }
   s += `</g>`;
-  // grey bars behind high-vol snapshots (regime context, drawn before the lines)
+  const cid = "clip" + Math.random().toString(36).slice(2, 8);
+  s += `<defs><clipPath id="${cid}"><rect x="${M.l}" y="${yTop - 3}" width="${W-M.l-M.r}" height="${yBot - yTop + 6}"/></clipPath></defs>`;
+  // high-vol snapshots behind everything
   const rg = REGIME[token]; if (rg && rg.size) {
     const ts = [...new Set(pts.map(p => p.t))].sort((a,b) => a-b);
     const half = ts.length > 1 ? Math.max(2, (X(ts[ts.length-1]) - X(ts[0])) / (ts.length - 1) / 2) : 6;
-    for (const tt of ts) if (rg.get(tt) === "high")
-      s += `<rect x="${(X(tt) - half).toFixed(1)}" y="${M.t}" width="${(2*half).toFixed(1)}" height="${H - M.t - M.b}" fill="${css("--volband")}"/>`;
+    // merge neighbouring high-vol snapshots into blocks (overlapping rects would stack the alpha)
+    const blocks = [];
+    for (const tt of ts) if (rg.get(tt) === "high") {
+      const a = X(tt) - half, b = X(tt) + half, last = blocks[blocks.length - 1];
+      if (last && a <= last[1] + 0.5) last[1] = Math.max(last[1], b); else blocks.push([a, b]);
+    }
+    for (const [a, b] of blocks)
+      s += `<rect x="${f1(Math.max(M.l, a))}" y="${yTop}" width="${f1(Math.min(W - M.r, b) - Math.max(M.l, a))}" height="${yBot - yTop}" fill="${css("--volband")}"/>`;
   }
-  const order = VENUES.filter(v => series[v]), surf = css("--card");
+  const order = VENUES.filter(v => disp[v]), surf = css("--card");
+  s += `<g clip-path="url(#${cid})">`;
+  if (Wh) {
+    // 1) interquartile band per venue (shown on focus / single venue)
+    for (const v of order) {
+      const p = disp[v]; let runs = [[]];
+      p.forEach((q, i) => { if (i && q.gap) runs.push([]); runs[runs.length-1].push(q); });
+      const d = runs.filter(r => r.length > 1).map(r =>
+        "M" + r.map(q => `${f1(X(q.t))},${f1(Y(q.hi))}`).join("L") + "L" + [...r].reverse().map(q => `${f1(X(q.t))},${f1(Y(q.lo))}`).join("L") + "Z").join("");
+      if (d) s += `<path class="band" data-v="${v}" d="${d}" fill="${color(v)}" fill-opacity=".16" visibility="hidden"/>`;
+    }
+    // 2) faint raw snapshots; spikes above the axis are pinned to the top as small triangles
+    for (const v of order) for (const q of thinRaw(series[v])) {
+      const x = X(q.t), y = Y(q.v);
+      if (y < yTop) s += `<path class="raw" data-v="${v}" d="M${f1(x-3.5)},${yTop+6}L${f1(x+3.5)},${yTop+6}L${f1(x)},${yTop}Z" fill="${color(v)}" fill-opacity=".5"/>`;
+      else if (q.partial) s += `<circle class="raw" data-v="${v}" cx="${f1(x)}" cy="${f1(y)}" r="2.2" fill="none" stroke="${color(v)}" stroke-opacity=".5" stroke-width="1"/>`;
+      else s += `<circle class="raw" data-v="${v}" cx="${f1(x)}" cy="${f1(y)}" r="2" fill="${color(v)}" fill-opacity=".28"/>`;
+    }
+  }
+  // 3) lines: solid where fills were complete, dashed where the window was mostly partial; break at gaps
   for (const v of order) {
-    const p = series[v];
-    if (p.length > 1) s += `<path d="${p.map((q,i) => `${i?"L":"M"}${X(q.t).toFixed(1)},${Y(q.v).toFixed(1)}`).join("")}" fill="none" stroke="${color(v)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const p = disp[v]; let solid = "", dash = "";
+    for (let i = 1; i < p.length; i++) {
+      const a = p[i-1], b = p[i]; if (b.gap) continue;
+      const seg = `M${f1(X(a.t))},${f1(Y(a.v))}L${f1(X(b.t))},${f1(Y(b.v))}`;
+      if (a.partial || b.partial) dash += seg; else solid += seg;
+    }
+    const sw = Wh ? 2.25 : 2;
+    if (solid) s += `<path class="ln" data-v="${v}" d="${solid}" fill="none" stroke="${color(v)}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if (dash) s += `<path class="ln" data-v="${v}" d="${dash}" fill="none" stroke="${color(v)}" stroke-width="${sw}" stroke-dasharray="4 4" stroke-linecap="round"/>`;
+    p.forEach((q, i) => { const lone = (i === 0 || q.gap) && (i === p.length - 1 || p[i+1].gap);
+      if (lone) s += `<circle class="ln" data-v="${v}" cx="${f1(X(q.t))}" cy="${f1(Y(q.v))}" r="2.5" fill="${color(v)}"/>`; });
+    if (!Wh) for (const q of p) {        // raw mode: markers as before
+      const dense = p.length > 36; if (dense && !q.partial) continue;
+      s += `<circle class="ln" data-v="${v}" cx="${f1(X(q.t))}" cy="${f1(Y(q.v))}" r="${dense ? 3 : 3.5}" fill="${q.partial ? surf : color(v)}" stroke="${q.partial ? color(v) : surf}" stroke-width="${q.partial ? 1.6 : 1.5}"/>`;
+    }
   }
-  for (const v of order) for (const q of series[v]) {
-    const dense = series[v].length > 36;
-    if (dense && !q.partial) continue;
-    s += `<circle cx="${X(q.t)}" cy="${Y(q.v)}" r="${dense ? 3 : 3.5}" fill="${q.partial ? surf : color(v)}" stroke="${q.partial ? color(v) : surf}" stroke-width="${q.partial ? 1.6 : 1.5}"/>`;
-  }
-  s += `<line class="xh" y1="${M.t}" y2="${H-M.b}" stroke="${css("--text-3")}" stroke-width="1" stroke-dasharray="2 3" visibility="hidden"/>`;
+  s += `</g>`;
+  s += `<line class="xh" y1="${yTop}" y2="${yBot}" stroke="${css("--text-3")}" stroke-width="1" stroke-dasharray="2 3" visibility="hidden"/>`;
   s += `<g class="hl"></g><rect class="hit" x="${M.l}" y="0" width="${W-M.l-M.r}" height="${H}" fill="transparent"/></svg><div class="tip"></div>`;
   chart.innerHTML = s;
   const svg = chart.querySelector("svg"), tip = chart.querySelector(".tip");
-  const times = [...new Set(pts.map(p => p.t))].sort((a,b) => a-b);
-  const P = {svg, tip, series, order, X, Y, W, times, m}; PANELS.push(P);
+  const times = [...new Set(dpts.map(p => p.t))].sort((a,b) => a-b);
+  const P = {svg, tip, disp, order, X, Y, W, times, m, Wh};
+  P.applyFocus = () => {
+    const single = P.order.length === 1;
+    svg.querySelectorAll(".band").forEach(el => el.setAttribute("visibility", single || el.dataset.v === FOCUS ? "visible" : "hidden"));
+    svg.querySelectorAll(".ln, .raw").forEach(el => el.style.opacity = FOCUS && el.dataset.v !== FOCUS && P.order.includes(FOCUS) ? .25 : "");
+  };
+  P.applyFocus();
+  PANELS.push(P);
   const hit = chart.querySelector(".hit");
   const onMove = ev => {
-    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
-    syncHover(times.reduce((a,b) => Math.abs(X(b)-px) < Math.abs(X(a)-px) ? b : a), P);
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width, py = (ev.clientY - r.top) * H / r.height;
+    const tt = times.reduce((a,b) => Math.abs(X(b)-px) < Math.abs(X(a)-px) ? b : a);
+    // focus the venue whose line is closest to the pointer (within 16 px)
+    let best = null, bd = 16;
+    for (const v of order) { const q = disp[v].find(q => q.t === tt); if (q) { const d = Math.abs(Y(q.v) - py); if (d < bd) { bd = d; best = v; } } }
+    setFocus(best);
+    syncHover(tt, P);
   };
   hit.addEventListener("pointermove", onMove); hit.addEventListener("pointerdown", onMove);
-  hit.addEventListener("pointerleave", () => syncHover(null, null));
+  hit.addEventListener("pointerleave", () => { setFocus(null); syncHover(null, null); });
 }
 
 function syncHover(tt0, active) {
@@ -692,12 +795,15 @@ function syncHover(tt0, active) {
     if (tt0 == null) { xh.setAttribute("visibility", "hidden"); hl.innerHTML = ""; P.tip.classList.remove("on"); continue; }
     const tt = P.times.reduce((a,b) => Math.abs(b-tt0) < Math.abs(a-tt0) ? b : a);
     xh.setAttribute("x1", P.X(tt)); xh.setAttribute("x2", P.X(tt)); xh.setAttribute("visibility", "visible");
-    const at = P.order.map(v => [v, P.series[v].find(q => q.t === tt)]).filter(([,q]) => q);
+    const at = P.order.map(v => [v, P.disp[v].find(q => q.t === tt)]).filter(([,q]) => q);
     hl.innerHTML = at.map(([v,q]) => `<circle cx="${P.X(tt)}" cy="${P.Y(q.v)}" r="4.5" fill="${color(v)}" stroke="${surf}" stroke-width="2"/>`).join("");
     if (P !== active) { P.tip.classList.remove("on"); continue; }
     const lb = METRICS[P.m].lowerBetter; at.sort((a,b) => lb ? a[1].v - b[1].v : b[1].v - a[1].v);
-    P.tip.innerHTML = `<div class="t">${fmtTime(new Date(tt))}</div>` + at.map(([v,q]) =>
-      `<div class="r"><span><span class="dot" style="background:${color(v)}"></span>${LABEL[v]}</span><span class="v">${fmtVal(q.v, P.m)}${star(q)}</span></div>`).join("");
+    P.tip.innerHTML = `<div class="t">${fmtTime(new Date(tt))}${P.Wh ? ` · ${t("smoothShort")(P.Wh)}` : ""}</div>` + at.map(([v,q]) =>
+      `<div class="r"${FOCUS === v ? ' style="font-weight:600"' : ""}><span><span class="dot" style="background:${color(v)}"></span>${LABEL[v]}</span>` +
+      `<span class="v">${P.Wh ? fmtVal(q.v, P.m) + (q.partial ? " *" : "") +
+        `<span style="font-weight:400;color:var(--text-3);margin-left:8px">${t("rawLbl")} ${fmtVal(q.raw, P.m)}${star({partial: q.rawPartial, fill: q.rawFill})}</span>`
+        : fmtVal(q.v, P.m) + star(q)}</span></div>`).join("");
     P.tip.classList.add("on");
     const r = P.svg.getBoundingClientRect(), left = P.X(tt) * r.width / P.W, tw = P.tip.offsetWidth;
     P.tip.style.left = (left + 14 + tw > r.width ? Math.max(0, left - tw - 14) : left + 14) + "px"; P.tip.style.top = "6px";
