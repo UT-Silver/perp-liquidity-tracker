@@ -126,3 +126,11 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 2026-11-04T19:30:24+00:00,edgex,DOGE,error,[edgex] getMetaData request failed: 
 2026-11-14T23:15:20+00:00,lighter,ETH,error,[lighter] orderBookDetails request failed: 
 2026-11-14T23:15:20+00:00,aster,SOL,error,[aster] depth request failed: 
+2026-11-17T11:00:45+00:00,hyperliquid,BTC,error,"[hyperliquid] l2Book request failed: Client error '429 Too Many Requests' for url 'https://api.hyperliquid.xyz/info'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+2026-11-17T11:00:45+00:00,hyperliquid,SOL,error,"[hyperliquid] l2Book request failed: Client error '429 Too Many Requests' for url 'https://api.hyperliquid.xyz/info'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+2026-11-17T11:00:45+00:00,hyperliquid,DOGE,error,"[hyperliquid] l2Book request failed: Client error '429 Too Many Requests' for url 'https://api.hyperliquid.xyz/info'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+2026-11-17T11:00:45+00:00,hyperliquid,SUI,error,"[hyperliquid] l2Book request failed: Client error '429 Too Many Requests' for url 'https://api.hyperliquid.xyz/info'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
